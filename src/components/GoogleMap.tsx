@@ -17,6 +17,21 @@ interface MarkerGroup {
 	visible?: boolean;
 }
 
+interface HeatmapData {
+	position: { lat: number; lng: number };
+	weight?: number; // Optional weight for intensity
+}
+
+interface HeatmapOptions {
+	data: HeatmapData[];
+	visible?: boolean;
+	radius?: number;
+	opacity?: number;
+	gradient?: string[];
+	maxIntensity?: number;
+	dissipating?: boolean;
+}
+
 interface GoogleMapProps {
 	center?: { lat: number; lng: number };
 	zoom?: number;
@@ -25,6 +40,7 @@ interface GoogleMapProps {
 	className?: string;
 	markers?: MarkerData[]; // Keep for backward compatibility
 	markerGroups?: MarkerGroup[];
+	heatmap?: HeatmapOptions;
 }
 
 // Disable ESLint for Google Maps global since it's external
@@ -45,6 +61,7 @@ export default function GoogleMap({
 	className = "",
 	markers = [],
 	markerGroups = [],
+	heatmap,
 }: GoogleMapProps) {
 	const mapRef = useRef<HTMLDivElement>(null);
 	const [isLoaded, setIsLoaded] = useState(false);
@@ -54,6 +71,8 @@ export default function GoogleMap({
 	const markersRef = useRef<any[]>([]);
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const groupMarkersRef = useRef<Map<string, any[]>>(new Map());
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const heatmapRef = useRef<any>(null);
 
 	// Helper function to create custom marker icon
 	const createCustomIcon = (color: string = "#FF0000", label?: string) => {
@@ -187,6 +206,62 @@ export default function GoogleMap({
 			});
 		}
 	}, [markers, markerGroups, isLoaded]);
+
+	// Effect to handle heatmap
+	useEffect(() => {
+		if (mapInstanceRef.current && isLoaded && window.google?.maps?.visualization) {
+			// Clear existing heatmap
+			if (heatmapRef.current) {
+				heatmapRef.current.setMap(null);
+				heatmapRef.current = null;
+			}
+
+			// Create new heatmap if data is provided
+			if (heatmap && heatmap.data && heatmap.data.length > 0 && heatmap.visible !== false) {
+				// Convert heatmap data to Google Maps format
+				const heatmapData = heatmap.data.map((point) => {
+					if (point.weight !== undefined) {
+						// Weighted data point
+						return {
+							location: new window.google.maps.LatLng(point.position.lat, point.position.lng),
+							weight: point.weight,
+						};
+					} else {
+						// Simple location point
+						return new window.google.maps.LatLng(point.position.lat, point.position.lng);
+					}
+				});
+
+				// Create heatmap layer with options
+				const heatmapLayer = new window.google.maps.visualization.HeatmapLayer({
+					data: heatmapData,
+					radius: heatmap.radius || 20,
+					opacity: heatmap.opacity || 0.6,
+					maxIntensity: heatmap.maxIntensity,
+					dissipating: heatmap.dissipating !== false, // Default to true
+					gradient: heatmap.gradient || [
+						"rgba(0, 255, 255, 0)",
+						"rgba(0, 255, 255, 1)",
+						"rgba(0, 191, 255, 1)",
+						"rgba(0, 127, 255, 1)",
+						"rgba(0, 63, 255, 1)",
+						"rgba(0, 0, 255, 1)",
+						"rgba(0, 0, 223, 1)",
+						"rgba(0, 0, 191, 1)",
+						"rgba(0, 0, 159, 1)",
+						"rgba(0, 0, 127, 1)",
+						"rgba(63, 0, 91, 1)",
+						"rgba(127, 0, 63, 1)",
+						"rgba(191, 0, 31, 1)",
+						"rgba(255, 0, 0, 1)",
+					],
+				});
+
+				heatmapLayer.setMap(mapInstanceRef.current);
+				heatmapRef.current = heatmapLayer;
+			}
+		}
+	}, [heatmap, isLoaded]);
 
 	if (!isLoaded) {
 		return (
