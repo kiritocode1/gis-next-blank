@@ -3,6 +3,7 @@
 import GoogleMap from "@/components/GoogleMap";
 import Sidebar from "@/components/Sidebar";
 import { useState, useEffect } from "react";
+import { parseKMLFile, type KMLFeature, type KMLMarker } from "@/utils/kmlParser";
 
 export default function Home() {
 	// State for selected point and search
@@ -14,10 +15,51 @@ export default function Home() {
 	const [markersVisible, setMarkersVisible] = useState(true); // Already enabled by default
 	const [heatmapVisible, setHeatmapVisible] = useState(true); // Already enabled by default
 
+	// KML parsing states
+	const [kmlFeatures, setKmlFeatures] = useState<KMLFeature[]>([]);
+	const [kmlMarkers, setKmlMarkers] = useState<KMLMarker[]>([]);
+	const [kmlParsingStatus, setKmlParsingStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+
 	// State for absolute URLs (client-side only)
 	const [kmlAbsoluteUrl, setKmlAbsoluteUrl] = useState("/kml/nashik_gramin.kml");
 
-	// Effect to set absolute URLs after component mounts
+	// Effect to parse KML file when component mounts or KML visibility changes
+	useEffect(() => {
+		const loadKMLData = async () => {
+			if (kmlLayerVisible && typeof window !== "undefined") {
+				console.log("🔄 Loading KML data...");
+				setKmlParsingStatus("loading");
+
+				try {
+					const result = await parseKMLFile("/kml/nashik_gramin.kml");
+
+					if (result.success) {
+						console.log("✅ KML loaded successfully:", {
+							features: result.features.length,
+							markers: result.markers.length,
+						});
+
+						setKmlFeatures(result.features);
+						setKmlMarkers(result.markers);
+						setKmlParsingStatus("success");
+					} else {
+						console.error("❌ KML parsing failed:", result.error);
+						setKmlParsingStatus("error");
+					}
+				} catch (error) {
+					console.error("❌ KML loading error:", error);
+					setKmlParsingStatus("error");
+				}
+			} else {
+				// Clear KML data when disabled
+				setKmlFeatures([]);
+				setKmlMarkers([]);
+				setKmlParsingStatus("idle");
+			}
+		};
+
+		loadKMLData();
+	}, [kmlLayerVisible]);
 	useEffect(() => {
 		if (typeof window !== "undefined") {
 			setKmlAbsoluteUrl(`${window.location.origin}/kml/nashik_gramin.kml`);
