@@ -41,6 +41,16 @@ interface GoogleMapProps {
 	markers?: MarkerData[]; // Keep for backward compatibility
 	markerGroups?: MarkerGroup[];
 	heatmap?: HeatmapOptions;
+	selectedPoint?: { lat: number; lng: number; zoom?: number };
+	onPointClick?: (point: { lat: number; lng: number; title?: string; group?: string }) => void;
+	searchablePoints?: Array<{
+		id: string;
+		position: { lat: number; lng: number };
+		title: string;
+		description?: string;
+		tags?: string[];
+		group?: string;
+	}>;
 }
 
 // Disable ESLint for Google Maps global since it's external
@@ -62,6 +72,9 @@ export default function GoogleMap({
 	markers = [],
 	markerGroups = [],
 	heatmap,
+	selectedPoint,
+	onPointClick,
+	searchablePoints = [],
 }: GoogleMapProps) {
 	const mapRef = useRef<HTMLDivElement>(null);
 	const [isLoaded, setIsLoaded] = useState(false);
@@ -73,6 +86,8 @@ export default function GoogleMap({
 	const groupMarkersRef = useRef<Map<string, any[]>>(new Map());
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const heatmapRef = useRef<any>(null);
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const infoWindowRef = useRef<any>(null);
 
 	// Helper function to create custom marker icon
 	const createCustomIcon = (color: string = "#FF0000", label?: string) => {
@@ -88,6 +103,26 @@ export default function GoogleMap({
 			size: new window.google.maps.Size(32, 40),
 			anchor: new window.google.maps.Point(16, 40),
 		};
+	};
+
+	// Helper function to create info window content
+	const createInfoWindowContent = (title: string, description?: string, group?: string, coordinates?: { lat: number; lng: number }) => {
+		const content = `
+			<div style="max-width: 250px; font-family: Arial, sans-serif; padding: 8px;">
+				<h3 style="margin: 0 0 8px 0; color: #1f2937; font-size: 16px; font-weight: 600;">${title}</h3>
+				${group ? `<div style="margin-bottom: 6px;"><span style="background: #3b82f6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">${group}</span></div>` : ""}
+				${description ? `<p style="margin: 6px 0; color: #4b5563; font-size: 14px; line-height: 1.4;">${description}</p>` : ""}
+				${
+					coordinates
+						? `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;"><strong>Coordinates:</strong> ${coordinates.lat.toFixed(
+								4,
+						  )}, ${coordinates.lng.toFixed(4)}</div>`
+						: ""
+				}
+			</div>
+		`;
+		console.log("Generated info window content:", content);
+		return content;
 	};
 
 	useEffect(() => {
@@ -155,6 +190,9 @@ export default function GoogleMap({
 
 	// Effect to handle initial markers and marker updates
 	useEffect(() => {
+		console.log("Effect running - isLoaded:", isLoaded, "mapInstance:", !!mapInstanceRef.current);
+		console.log("Google Maps API available:", !!(window.google && window.google.maps && window.google.maps.InfoWindow));
+
 		if (mapInstanceRef.current && isLoaded) {
 			// Clear existing individual markers
 			markersRef.current.forEach((marker) => marker.setMap(null));
@@ -176,6 +214,35 @@ export default function GoogleMap({
 					icon: markerData.icon,
 					animation: window.google.maps.Animation.DROP,
 				});
+
+				// Add click listener for info window
+				marker.addListener("click", () => {
+					console.log("Individual marker clicked:", markerData.title);
+
+					// Close existing info window
+					if (infoWindowRef.current) {
+						infoWindowRef.current.close();
+					}
+
+					// Create new info window with simpler content
+					const infoWindow = new window.google.maps.InfoWindow({
+						content: `<div style="padding: 10px; min-width: 200px;"><h3>${markerData.title || "Marker"}</h3><p>Individual Marker</p></div>`,
+						maxWidth: 300,
+					});
+
+					infoWindow.open(mapInstanceRef.current, marker);
+					infoWindowRef.current = infoWindow;
+
+					// Call onPointClick if provided
+					if (onPointClick) {
+						onPointClick({
+							lat: markerData.position.lat,
+							lng: markerData.position.lng,
+							title: markerData.title,
+						});
+					}
+				});
+
 				markersRef.current.push(marker);
 			});
 
@@ -196,6 +263,70 @@ export default function GoogleMap({
 							label: markerData.label,
 							icon: markerData.icon || customIcon,
 							animation: window.google.maps.Animation.DROP,
+						});
+
+						// Add click listener for group markers
+						marker.addListener("click", () => {
+							const markerTitle = markerData.title || `${group.name} ${index + 1}`;
+							console.log("Group marker clicked:", markerTitle);
+
+							// Close existing info window first
+							if (infoWindowRef.current) {
+								infoWindowRef.current.close();
+								infoWindowRef.current = null;
+							}
+
+							try {
+								// Create enhanced info window content
+								const content = `
+									<div style="padding: 15px; max-width: 280px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.4;">
+										<div style="display: flex; align-items: center; margin-bottom: 10px;">
+											<div style="width: 12px; height: 12px; background-color: ${group.color || "#3b82f6"}; border-radius: 50%; margin-right: 8px;"></div>
+											<h3 style="margin: 0; color: #1f2937; font-size: 16px; font-weight: 600;">${markerTitle}</h3>
+										</div>
+										<div style="margin-bottom: 8px;">
+											<span style="background: ${group.color || "#3b82f6"}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">${group.name}</span>
+										</div>
+										<p style="margin: 8px 0; color: #4b5563; font-size: 14px;">📍 This ${group.name.toLowerCase()} location is part of San Francisco's public infrastructure network.</p>
+										<div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
+											<strong>Coordinates:</strong> ${markerData.position.lat.toFixed(4)}, ${markerData.position.lng.toFixed(4)}
+										</div>
+									</div>
+								`;
+
+								// Create new info window with proper settings
+								const infoWindow = new window.google.maps.InfoWindow({
+									content: content,
+									maxWidth: 320,
+									zIndex: 1000,
+									disableAutoPan: false,
+								});
+
+								console.log("Opening info window for:", markerTitle);
+
+								// Open info window with standard Marker API
+								infoWindow.open(mapInstanceRef.current, marker);
+								infoWindowRef.current = infoWindow;
+
+								console.log("✅ Info window opened successfully!");
+
+								// Add close listener to clean up the reference
+								infoWindow.addListener("closeclick", () => {
+									infoWindowRef.current = null;
+								});
+							} catch (error) {
+								console.error("Error opening info window:", error);
+							}
+
+							// Call onPointClick if provided
+							if (onPointClick) {
+								onPointClick({
+									lat: markerData.position.lat,
+									lng: markerData.position.lng,
+									title: markerTitle,
+									group: group.name,
+								});
+							}
 						});
 
 						groupMarkers.push(marker);
@@ -262,6 +393,44 @@ export default function GoogleMap({
 			}
 		}
 	}, [heatmap, isLoaded]);
+
+	// Effect to handle selected point navigation
+	useEffect(() => {
+		if (mapInstanceRef.current && selectedPoint) {
+			const targetZoom = selectedPoint.zoom || 15;
+
+			// Smooth pan and zoom to the selected point
+			mapInstanceRef.current.panTo(selectedPoint);
+			mapInstanceRef.current.setZoom(targetZoom);
+
+			// Optional: Add a temporary highlight marker
+			const highlightMarker = new window.google.maps.Marker({
+				position: selectedPoint,
+				map: mapInstanceRef.current,
+				icon: {
+					url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+						<svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="20" cy="20" r="18" fill="#FFD700" stroke="#FF4500" stroke-width="3" opacity="0.8"/>
+							<circle cx="20" cy="20" r="12" fill="#FF4500" opacity="0.6"/>
+							<circle cx="20" cy="20" r="6" fill="#FFFFFF"/>
+						</svg>
+					`)}`,
+					scalable: true,
+					size: new window.google.maps.Size(40, 50),
+					anchor: new window.google.maps.Point(20, 25),
+				},
+				animation: window.google.maps.Animation.BOUNCE,
+				zIndex: 1000,
+			});
+
+			// Remove highlight after 3 seconds
+			setTimeout(() => {
+				if (highlightMarker) {
+					highlightMarker.setMap(null);
+				}
+			}, 3000);
+		}
+	}, [selectedPoint]);
 
 	if (!isLoaded) {
 		return (
