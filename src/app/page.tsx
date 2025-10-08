@@ -1,6 +1,7 @@
 "use client";
 
 import GoogleMap from "@/components/GoogleMap";
+import Sidebar from "@/components/Sidebar";
 import { useState, useEffect } from "react";
 
 export default function Home() {
@@ -8,8 +9,10 @@ export default function Home() {
 	const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number; zoom?: number } | undefined>();
 	const [searchQuery, setSearchQuery] = useState("");
 	const [clickedPoint, setClickedPoint] = useState<{ lat: number; lng: number; title?: string; group?: string } | null>(null);
-	const [kmlLayerVisible, setKmlLayerVisible] = useState(false);
+	const [kmlLayerVisible, setKmlLayerVisible] = useState(true); // Enable by default
 	const [geoJsonLayerVisible, setGeoJsonLayerVisible] = useState(false);
+	const [markersVisible, setMarkersVisible] = useState(true); // Already enabled by default
+	const [heatmapVisible, setHeatmapVisible] = useState(true); // Already enabled by default
 
 	// State for absolute URLs (client-side only)
 	const [kmlAbsoluteUrl, setKmlAbsoluteUrl] = useState("/kml/nashik_gramin.kml");
@@ -48,7 +51,7 @@ export default function Home() {
 		{
 			name: "Parks",
 			color: "#22C55E", // Green
-			visible: true,
+			visible: markersVisible,
 			markers: [
 				{
 					position: { lat: 37.7749, lng: -122.4194 },
@@ -67,7 +70,7 @@ export default function Home() {
 		{
 			name: "Bus Stations",
 			color: "#3B82F6", // Blue
-			visible: true,
+			visible: markersVisible,
 			markers: [
 				{
 					position: { lat: 37.7849, lng: -122.4194 },
@@ -90,7 +93,7 @@ export default function Home() {
 		{
 			name: "Restaurants",
 			color: "#EF4444", // Red
-			visible: true,
+			visible: markersVisible,
 			markers: [
 				{
 					position: { lat: 37.7949, lng: -122.4194 },
@@ -109,7 +112,7 @@ export default function Home() {
 		{
 			name: "Hotels",
 			color: "#8B5CF6", // Purple
-			visible: true,
+			visible: markersVisible,
 			markers: [
 				{
 					position: { lat: 37.7889, lng: -122.4094 },
@@ -162,7 +165,7 @@ export default function Home() {
 			{ position: { lat: 37.7695, lng: -122.4863 }, weight: 35 },
 			{ position: { lat: 37.7693, lng: -122.4861 }, weight: 45 },
 		],
-		visible: true,
+		visible: heatmapVisible,
 		radius: 25,
 		opacity: 0.7,
 		maxIntensity: 100,
@@ -244,6 +247,20 @@ export default function Home() {
 		console.log("🔄 Page: GeoJSON toggle completed, new visible state should be:", visible);
 	};
 
+	// Handle Markers toggle
+	const handleMarkersToggle = (visible: boolean) => {
+		console.log("📍 Page: Markers toggle handler called with:", visible);
+		setMarkersVisible(visible);
+		console.log("📍 Page: Markers toggle completed, new visible state should be:", visible);
+	};
+
+	// Handle Heatmap toggle
+	const handleHeatmapToggle = (visible: boolean) => {
+		console.log("🔥 Page: Heatmap toggle handler called with:", visible);
+		setHeatmapVisible(visible);
+		console.log("🔥 Page: Heatmap toggle completed, new visible state should be:", visible);
+	};
+
 	// Navigate to a specific point
 	const navigateToPoint = (point: { lat: number; lng: number; zoom?: number }) => {
 		setSelectedPoint(point);
@@ -285,193 +302,144 @@ export default function Home() {
 	});
 
 	return (
-		<div className="min-h-screen bg-gray-50 p-8">
-			<div className="max-w-6xl mx-auto">
-				<h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">GIS System - Nashik Gramin KML/GeoJSON Viewer</h1>
-
-				{/* Search Interface */}
-				<div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-					<h3 className="text-lg font-semibold text-gray-800 mb-4">Point Search & Navigation</h3>
-					<p className="text-sm text-gray-600 mb-4">
-						💡 <strong>Tip:</strong> Click on any marker on the map to see detailed information including title, description, and coordinates!
-					</p>
-					<div className="flex gap-4 mb-4">
-						<input
-							type="text"
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
-							onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-							placeholder="Search for places (e.g., 'parks', 'Union Square', 'restaurants')..."
-							className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-						/>
-						<button
-							onClick={handleSearch}
-							className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-						>
-							Search & Navigate
-						</button>
-					</div>
-
-					{/* Layer Controls */}
-					<div className="border-t pt-4 mt-4">
-						<h4 className="text-md font-medium text-gray-700 mb-3">Map Layers</h4>
-						<div className="flex gap-4">
-							<label className="flex items-center space-x-2">
+		<>
+			<Sidebar>
+				<div className="space-y-4">
+					<div className="space-y-3">
+						<h3 className="text-sm font-medium text-gray-300 mb-3">Map Layers</h3>
+						<div className="space-y-3">
+							{/* KML Layer Toggle */}
+							<label className="flex items-center space-x-3 cursor-pointer group">
 								<input
 									type="checkbox"
 									checked={kmlLayerVisible}
 									onChange={(e) => handleKMLToggle(e.target.checked)}
-									className="rounded border-gray-300"
+									className="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500/50"
 								/>
-								<span className="text-sm font-medium text-gray-700">🗺️ KML Layer (auto-fallback to GeoJSON)</span>
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🗺️ KML Boundaries</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												kmlLayerVisible ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{kmlLayerVisible ? "ON" : "OFF"}
+										</span>
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Nashik Gramin boundaries (auto-fallback)</p>
+								</div>
 							</label>
-							<label className="flex items-center space-x-2">
+
+							{/* Points/Markers Layer Toggle */}
+							<label className="flex items-center space-x-3 cursor-pointer group">
+								<input
+									type="checkbox"
+									checked={markersVisible}
+									onChange={(e) => handleMarkersToggle(e.target.checked)}
+									className="rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500/50"
+								/>
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">📍 Points of Interest</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												markersVisible ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{markersVisible ? "ON" : "OFF"}
+										</span>
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Restaurants, parks, hotels & stations</p>
+								</div>
+							</label>
+
+							{/* Heatmap Layer Toggle */}
+							<label className="flex items-center space-x-3 cursor-pointer group">
+								<input
+									type="checkbox"
+									checked={heatmapVisible}
+									onChange={(e) => handleHeatmapToggle(e.target.checked)}
+									className="rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-orange-500/50"
+								/>
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🔥 Activity Heatmap</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												heatmapVisible ? "bg-orange-500/20 text-orange-400 border border-orange-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{heatmapVisible ? "ON" : "OFF"}
+										</span>
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Population & activity density</p>
+								</div>
+							</label>
+
+							{/* GeoJSON Layer Toggle */}
+							<label className="flex items-center space-x-3 cursor-pointer group">
 								<input
 									type="checkbox"
 									checked={geoJsonLayerVisible}
 									onChange={(e) => handleGeoJSONToggle(e.target.checked)}
-									className="rounded border-gray-300"
+									className="rounded border-gray-600 bg-gray-700 text-cyan-500 focus:ring-cyan-500/50"
 								/>
-								<span className="text-sm font-medium text-gray-700">📍 GeoJSON Layer (Nashik Gramin)</span>
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🗺️ GeoJSON Layer</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												geoJsonLayerVisible ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{geoJsonLayerVisible ? "ON" : "OFF"}
+										</span>
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Alternative boundary display</p>
+								</div>
 							</label>
 						</div>
-					</div>
 
-					{/* Quick Navigation Buttons */}
-					<div className="flex flex-wrap gap-2">
-						<button
-							onClick={() => navigateToPoint({ lat: 37.7749, lng: -122.4194, zoom: 15 })}
-							className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm hover:bg-green-200"
-						>
-							📍 Union Square
-						</button>
-						<button
-							onClick={() => navigateToPoint({ lat: 37.8049, lng: -122.4194, zoom: 15 })}
-							className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm hover:bg-blue-200"
-						>
-							🚌 Fisherman&apos;s Wharf
-						</button>
-						<button
-							onClick={() => navigateToPoint({ lat: 37.7549, lng: -122.4494, zoom: 14 })}
-							className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm hover:bg-green-200"
-						>
-							🌳 Golden Gate Park
-						</button>
-						<button
-							onClick={() => navigateToPoint({ lat: 37.7949, lng: -122.4194, zoom: 15 })}
-							className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm hover:bg-red-200"
-						>
-							🍕 Tony&apos;s Pizza
-						</button>
-					</div>
-
-					{/* Current Selection Display */}
-					{clickedPoint && (
-						<div className="mt-4 p-3 bg-gray-50 rounded-lg">
-							<p className="text-sm text-gray-600">
-								<strong>Selected:</strong> {clickedPoint.title}
-								{clickedPoint.group && <span className="text-blue-600">({clickedPoint.group})</span>}
-								<br />
-								<strong>Coordinates:</strong> {clickedPoint.lat.toFixed(4)}, {clickedPoint.lng.toFixed(4)}
-							</p>
-						</div>
-					)}
-				</div>
-
-				<div className="bg-white rounded-lg shadow-lg p-6">
-					<h2 className="text-xl font-semibold text-gray-800 mb-4">Interactive Map with Markers & Heatmap</h2>
-					<GoogleMap
-						center={{ lat: 20.0112771, lng: 74.00833808 }} // Nashik Gramin center
-						zoom={10}
-						height="600px"
-						width="100%"
-						className="w-full"
-						markerGroups={markerGroups}
-						heatmap={heatmapData}
-						kmlLayer={kmlLayerConfig}
-						geoJsonLayer={geoJsonLayerConfig}
-						selectedPoint={selectedPoint}
-						onPointClick={handlePointClick}
-						searchablePoints={searchablePoints}
-						onKMLToggle={handleKMLToggle}
-						onGeoJSONToggle={handleGeoJSONToggle}
-						showLayerControls={true}
-					/>
-				</div>
-
-				{/* Legend */}
-				<div className="mt-6 bg-white rounded-lg shadow-lg p-6">
-					<h3 className="text-lg font-semibold text-gray-800 mb-4">Map Legend</h3>
-
-					{/* Layer Status */}
-					<div className="mb-6">
-						<h4 className="text-md font-medium text-gray-700 mb-3">Active Layers</h4>
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<div className={`flex items-center space-x-2 p-2 rounded ${kmlLayerVisible ? "bg-green-50 border border-green-200" : "bg-gray-50 border border-gray-200"}`}>
-								<div className={`w-3 h-3 rounded-full ${kmlLayerVisible ? "bg-green-500" : "bg-gray-400"}`}></div>
-								<span className={`text-sm font-medium ${kmlLayerVisible ? "text-green-800" : "text-gray-600"}`}>
-									KML/GeoJSON Layer {kmlLayerVisible ? "(Active - Auto-Fallback)" : "(Inactive)"}
-								</span>
-							</div>
-							<div className={`flex items-center space-x-2 p-2 rounded ${geoJsonLayerVisible ? "bg-blue-50 border border-blue-200" : "bg-gray-50 border border-gray-200"}`}>
-								<div className={`w-3 h-3 rounded-full ${geoJsonLayerVisible ? "bg-blue-500" : "bg-gray-400"}`}></div>
-								<span className={`text-sm font-medium ${geoJsonLayerVisible ? "text-blue-800" : "text-gray-600"}`}>
-									GeoJSON Layer {geoJsonLayerVisible ? "(Active)" : "(Inactive)"}
-								</span>
-							</div>
-						</div>
-					</div>
-
-					{/* Marker Groups Legend */}
-					<div className="mb-6">
-						<h4 className="text-md font-medium text-gray-700 mb-3">Marker Groups</h4>
-						<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-							{markerGroups.map((group) => (
-								<div
-									key={group.name}
-									className="flex items-center space-x-2"
-								>
-									<div
-										className="w-4 h-4 rounded-full"
-										style={{ backgroundColor: group.color }}
-									></div>
-									<span className="text-sm font-medium text-gray-700">
-										{group.name} ({group.markers.length})
-									</span>
+						{/* Layer Statistics */}
+						<div className="border-t border-gray-700/50 pt-3 mt-4">
+							<div className="text-xs text-gray-500 space-y-1">
+								<div className="flex justify-between">
+									<span>Active Layers:</span>
+									<span className="font-medium">{[kmlLayerVisible, markersVisible, heatmapVisible, geoJsonLayerVisible].filter(Boolean).length}/4</span>
 								</div>
-							))}
-						</div>
-					</div>
-
-					{/* Heatmap Legend */}
-					<div>
-						<h4 className="text-md font-medium text-gray-700 mb-3">Activity Heatmap</h4>
-						<div className="flex items-center space-x-4">
-							<div className="flex items-center space-x-2">
-								<div className="w-4 h-4 bg-gradient-to-r from-cyan-400 to-red-500 rounded"></div>
-								<span className="text-sm text-gray-600">Population/Activity Density</span>
+								<div className="flex justify-between">
+									<span>Marker Points:</span>
+									<span className="font-medium">{markerGroups.reduce((sum, group) => sum + group.markers.length, 0)}</span>
+								</div>
 							</div>
-							<div className="text-xs text-gray-500">
-								<span className="text-cyan-400">Low</span> → <span className="text-red-500">High</span>
-							</div>
-							<div className="text-xs text-gray-500">{heatmapData.data.length} data points</div>
 						</div>
-					</div>
-
-					{/* Instructions */}
-					<div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-						<h4 className="text-md font-medium text-blue-800 mb-2">📋 How to Use KML/GeoJSON Layers</h4>
-						<ul className="text-sm text-blue-700 space-y-1">
-							<li>• Use the checkboxes in the search panel to toggle KML and GeoJSON layers</li>
-							<li>• KML Layer automatically falls back to GeoJSON for local development</li>
-							<li>• GeoJSON Layer displays the same data with custom styling</li>
-							<li>• Click on layer features to see additional information</li>
-							<li>• You can have both layers active simultaneously for comparison</li>
-							<li>• Check console for detailed loading information and debugging</li>
-						</ul>
 					</div>
 				</div>
+			</Sidebar>
+
+			{/* Full-screen map positioned behind sidebar */}
+			<div className="fixed inset-0">
+				<GoogleMap
+					center={{ lat: 20.0112771, lng: 74.00833808 }}
+					zoom={10}
+					height="100vh"
+					width="100vw"
+					className="w-full h-full"
+					markerGroups={markerGroups}
+					heatmap={heatmapData}
+					kmlLayer={kmlLayerConfig}
+					geoJsonLayer={geoJsonLayerConfig}
+					selectedPoint={selectedPoint}
+					onPointClick={handlePointClick}
+					searchablePoints={searchablePoints}
+					onKMLToggle={handleKMLToggle}
+					onGeoJSONToggle={handleGeoJSONToggle}
+					onMarkersToggle={handleMarkersToggle}
+					onHeatmapToggle={handleHeatmapToggle}
+					showLayerControls={false}
+				/>
 			</div>
-		</div>
+		</>
 	);
 }

@@ -131,6 +131,8 @@ interface GoogleMapProps {
 	}>;
 	onKMLToggle?: (visible: boolean) => void;
 	onGeoJSONToggle?: (visible: boolean) => void;
+	onMarkersToggle?: (visible: boolean) => void;
+	onHeatmapToggle?: (visible: boolean) => void;
 	showLayerControls?: boolean;
 }
 
@@ -160,6 +162,8 @@ export default function GoogleMap({
 	searchablePoints = [],
 	onKMLToggle,
 	onGeoJSONToggle,
+	onMarkersToggle,
+	onHeatmapToggle,
 	showLayerControls = false,
 }: GoogleMapProps) {
 	const mapRef = useRef<HTMLDivElement>(null);
@@ -174,6 +178,8 @@ export default function GoogleMap({
 	const infoWindowRef = useRef<GoogleInfoWindowInstance | null>(null);
 	const [kmlVisible, setKmlVisible] = useState(kmlLayer?.visible ?? false);
 	const [geoJsonVisible, setGeoJsonVisible] = useState(geoJsonLayer?.visible ?? false);
+	const [markersVisible, setMarkersVisible] = useState(true);
+	const [heatmapVisible, setHeatmapVisible] = useState(true);
 
 	// Helper function to create custom marker icon
 	const createCustomIcon = (color: string = "#FF0000", label?: string) => {
@@ -334,8 +340,10 @@ export default function GoogleMap({
 
 			// Add grouped markers
 			markerGroups.forEach((group) => {
-				if (group.visible !== false) {
-					// Default to visible unless explicitly set to false
+				// Check if the group should be visible (considering both group.visible and markersVisible)
+				const shouldShowGroup = group.visible !== false && markersVisible;
+
+				if (shouldShowGroup) {
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					const groupMarkers: GoogleMarkerInstance[] = [];
 
@@ -422,7 +430,26 @@ export default function GoogleMap({
 				}
 			});
 		}
-	}, [markers, markerGroups, isLoaded]);
+	}, [markers, markerGroups, markersVisible, isLoaded]);
+
+	// Effect to synchronize internal state with props
+	useEffect(() => {
+		if (kmlLayer?.visible !== undefined) {
+			setKmlVisible(kmlLayer.visible);
+		}
+	}, [kmlLayer?.visible]);
+
+	useEffect(() => {
+		if (geoJsonLayer?.visible !== undefined) {
+			setGeoJsonVisible(geoJsonLayer.visible);
+		}
+	}, [geoJsonLayer?.visible]);
+
+	useEffect(() => {
+		if (heatmap?.visible !== undefined) {
+			setHeatmapVisible(heatmap.visible);
+		}
+	}, [heatmap?.visible]);
 
 	// Effect to handle heatmap
 	useEffect(() => {
@@ -433,8 +460,8 @@ export default function GoogleMap({
 				heatmapRef.current = null;
 			}
 
-			// Create new heatmap if data is provided
-			if (heatmap && heatmap.data && heatmap.data.length > 0 && heatmap.visible !== false) {
+			// Create new heatmap if data is provided and visible
+			if (heatmap && heatmap.data && heatmap.data.length > 0 && heatmapVisible) {
 				// Convert heatmap data to Google Maps format
 				const heatmapData = heatmap.data.map((point) => {
 					if (point.weight !== undefined) {
@@ -478,7 +505,7 @@ export default function GoogleMap({
 				heatmapRef.current = heatmapLayer;
 			}
 		}
-	}, [heatmap, isLoaded]);
+	}, [heatmap, heatmapVisible, isLoaded]);
 
 	// Effect to handle KML layer
 	useEffect(() => {
@@ -710,6 +737,22 @@ export default function GoogleMap({
 		}
 	};
 
+	const toggleMarkers = () => {
+		const newVisible = !markersVisible;
+		setMarkersVisible(newVisible);
+		if (onMarkersToggle) {
+			onMarkersToggle(newVisible);
+		}
+	};
+
+	const toggleHeatmap = () => {
+		const newVisible = !heatmapVisible;
+		setHeatmapVisible(newVisible);
+		if (onHeatmapToggle) {
+			onHeatmapToggle(newVisible);
+		}
+	};
+
 	if (!isLoaded) {
 		return (
 			<div
@@ -742,6 +785,28 @@ export default function GoogleMap({
 								className="rounded border-gray-300"
 							/>
 							<span className="text-gray-700">KML Layer</span>
+						</label>
+					)}
+					{markerGroups.length > 0 && (
+						<label className="flex items-center space-x-2 text-sm">
+							<input
+								type="checkbox"
+								checked={markersVisible}
+								onChange={toggleMarkers}
+								className="rounded border-gray-300"
+							/>
+							<span className="text-gray-700">Markers</span>
+						</label>
+					)}
+					{heatmap && (
+						<label className="flex items-center space-x-2 text-sm">
+							<input
+								type="checkbox"
+								checked={heatmapVisible}
+								onChange={toggleHeatmap}
+								className="rounded border-gray-300"
+							/>
+							<span className="text-gray-700">Heatmap</span>
 						</label>
 					)}
 					{geoJsonLayer && (
