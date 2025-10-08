@@ -1,13 +1,48 @@
 "use client";
 
 import GoogleMap from "@/components/GoogleMap";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Home() {
 	// State for selected point and search
 	const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number; zoom?: number } | undefined>();
 	const [searchQuery, setSearchQuery] = useState("");
 	const [clickedPoint, setClickedPoint] = useState<{ lat: number; lng: number; title?: string; group?: string } | null>(null);
+	const [kmlLayerVisible, setKmlLayerVisible] = useState(false);
+	const [geoJsonLayerVisible, setGeoJsonLayerVisible] = useState(false);
+
+	// State for absolute URLs (client-side only)
+	const [kmlAbsoluteUrl, setKmlAbsoluteUrl] = useState("/kml/nashik_gramin.kml");
+
+	// Effect to set absolute URLs after component mounts
+	useEffect(() => {
+		if (typeof window !== "undefined") {
+			setKmlAbsoluteUrl(`${window.location.origin}/kml/nashik_gramin.kml`);
+		}
+	}, []);
+
+	// KML Layer configuration
+	// Note: Google Maps KmlLayer requires absolute URLs, so we use window.location.origin
+	const kmlLayerConfig = {
+		url: kmlAbsoluteUrl,
+		visible: kmlLayerVisible,
+		preserveBounds: true,
+		suppressInfoWindows: false,
+	};
+
+	// GeoJSON Layer configuration
+	const geoJsonLayerConfig = {
+		url: "/kml/nashik_gramin.geojson",
+		visible: geoJsonLayerVisible,
+		style: {
+			strokeColor: "#FF0000",
+			strokeOpacity: 0.8,
+			strokeWeight: 2,
+			fillColor: "#FF0000",
+			fillOpacity: 0.35,
+		},
+	};
+
 	// Sample marker groups for different categories
 	const markerGroups = [
 		{
@@ -191,6 +226,24 @@ export default function Home() {
 		);
 	};
 
+	// Handle KML toggle
+	const handleKMLToggle = (visible: boolean) => {
+		console.log("🔄 Page: KML toggle handler called with:", visible);
+		console.log("🔄 Page: Current KML state before toggle:", kmlLayerVisible);
+		console.log("🔄 Page: KML config object:", kmlLayerConfig);
+		setKmlLayerVisible(visible);
+		console.log("🔄 Page: KML toggle completed, new visible state should be:", visible);
+	};
+
+	// Handle GeoJSON toggle
+	const handleGeoJSONToggle = (visible: boolean) => {
+		console.log("🔄 Page: GeoJSON toggle handler called with:", visible);
+		console.log("🔄 Page: Current GeoJSON state before toggle:", geoJsonLayerVisible);
+		console.log("🔄 Page: GeoJSON config object:", geoJsonLayerConfig);
+		setGeoJsonLayerVisible(visible);
+		console.log("🔄 Page: GeoJSON toggle completed, new visible state should be:", visible);
+	};
+
 	// Navigate to a specific point
 	const navigateToPoint = (point: { lat: number; lng: number; zoom?: number }) => {
 		setSelectedPoint(point);
@@ -219,10 +272,22 @@ export default function Home() {
 		}
 	};
 
+	// Debug logging for render props
+	console.log("🗺️ Page: Rendering with current state:", {
+		kmlLayerConfig,
+		geoJsonLayerConfig,
+		kmlLayerVisible,
+		geoJsonLayerVisible,
+		kmlLayerUrl: kmlLayerConfig.url,
+		geoJsonLayerUrl: geoJsonLayerConfig.url,
+		kmlAbsoluteUrl,
+		isClient: typeof window !== "undefined",
+	});
+
 	return (
 		<div className="min-h-screen bg-gray-50 p-8">
 			<div className="max-w-6xl mx-auto">
-				<h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">GIS System - Google Maps Integration</h1>
+				<h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">GIS System - Nashik Gramin KML/GeoJSON Viewer</h1>
 
 				{/* Search Interface */}
 				<div className="bg-white rounded-lg shadow-lg p-6 mb-6">
@@ -245,6 +310,31 @@ export default function Home() {
 						>
 							Search & Navigate
 						</button>
+					</div>
+
+					{/* Layer Controls */}
+					<div className="border-t pt-4 mt-4">
+						<h4 className="text-md font-medium text-gray-700 mb-3">Map Layers</h4>
+						<div className="flex gap-4">
+							<label className="flex items-center space-x-2">
+								<input
+									type="checkbox"
+									checked={kmlLayerVisible}
+									onChange={(e) => handleKMLToggle(e.target.checked)}
+									className="rounded border-gray-300"
+								/>
+								<span className="text-sm font-medium text-gray-700">🗺️ KML Layer (auto-fallback to GeoJSON)</span>
+							</label>
+							<label className="flex items-center space-x-2">
+								<input
+									type="checkbox"
+									checked={geoJsonLayerVisible}
+									onChange={(e) => handleGeoJSONToggle(e.target.checked)}
+									className="rounded border-gray-300"
+								/>
+								<span className="text-sm font-medium text-gray-700">📍 GeoJSON Layer (Nashik Gramin)</span>
+							</label>
+						</div>
 					</div>
 
 					{/* Quick Navigation Buttons */}
@@ -291,22 +381,46 @@ export default function Home() {
 				<div className="bg-white rounded-lg shadow-lg p-6">
 					<h2 className="text-xl font-semibold text-gray-800 mb-4">Interactive Map with Markers & Heatmap</h2>
 					<GoogleMap
-						center={{ lat: 37.7749, lng: -122.4194 }} // San Francisco
-						zoom={12}
+						center={{ lat: 20.0112771, lng: 74.00833808 }} // Nashik Gramin center
+						zoom={10}
 						height="600px"
 						width="100%"
 						className="w-full"
 						markerGroups={markerGroups}
 						heatmap={heatmapData}
+						kmlLayer={kmlLayerConfig}
+						geoJsonLayer={geoJsonLayerConfig}
 						selectedPoint={selectedPoint}
 						onPointClick={handlePointClick}
 						searchablePoints={searchablePoints}
+						onKMLToggle={handleKMLToggle}
+						onGeoJSONToggle={handleGeoJSONToggle}
+						showLayerControls={true}
 					/>
 				</div>
 
 				{/* Legend */}
 				<div className="mt-6 bg-white rounded-lg shadow-lg p-6">
 					<h3 className="text-lg font-semibold text-gray-800 mb-4">Map Legend</h3>
+
+					{/* Layer Status */}
+					<div className="mb-6">
+						<h4 className="text-md font-medium text-gray-700 mb-3">Active Layers</h4>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div className={`flex items-center space-x-2 p-2 rounded ${kmlLayerVisible ? "bg-green-50 border border-green-200" : "bg-gray-50 border border-gray-200"}`}>
+								<div className={`w-3 h-3 rounded-full ${kmlLayerVisible ? "bg-green-500" : "bg-gray-400"}`}></div>
+								<span className={`text-sm font-medium ${kmlLayerVisible ? "text-green-800" : "text-gray-600"}`}>
+									KML/GeoJSON Layer {kmlLayerVisible ? "(Active - Auto-Fallback)" : "(Inactive)"}
+								</span>
+							</div>
+							<div className={`flex items-center space-x-2 p-2 rounded ${geoJsonLayerVisible ? "bg-blue-50 border border-blue-200" : "bg-gray-50 border border-gray-200"}`}>
+								<div className={`w-3 h-3 rounded-full ${geoJsonLayerVisible ? "bg-blue-500" : "bg-gray-400"}`}></div>
+								<span className={`text-sm font-medium ${geoJsonLayerVisible ? "text-blue-800" : "text-gray-600"}`}>
+									GeoJSON Layer {geoJsonLayerVisible ? "(Active)" : "(Inactive)"}
+								</span>
+							</div>
+						</div>
+					</div>
 
 					{/* Marker Groups Legend */}
 					<div className="mb-6">
@@ -342,6 +456,19 @@ export default function Home() {
 							</div>
 							<div className="text-xs text-gray-500">{heatmapData.data.length} data points</div>
 						</div>
+					</div>
+
+					{/* Instructions */}
+					<div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+						<h4 className="text-md font-medium text-blue-800 mb-2">📋 How to Use KML/GeoJSON Layers</h4>
+						<ul className="text-sm text-blue-700 space-y-1">
+							<li>• Use the checkboxes in the search panel to toggle KML and GeoJSON layers</li>
+							<li>• KML Layer automatically falls back to GeoJSON for local development</li>
+							<li>• GeoJSON Layer displays the same data with custom styling</li>
+							<li>• Click on layer features to see additional information</li>
+							<li>• You can have both layers active simultaneously for comparison</li>
+							<li>• Check console for detailed loading information and debugging</li>
+						</ul>
 					</div>
 				</div>
 			</div>

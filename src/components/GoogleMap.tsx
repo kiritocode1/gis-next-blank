@@ -2,6 +2,62 @@
 
 import { useEffect, useRef, useState } from "react";
 
+// Interface for Google Maps click events
+interface GoogleMapsClickEvent {
+	latLng: {
+		lat(): number;
+		lng(): number;
+	};
+	featureData?: {
+		name?: string;
+		[key: string]: unknown;
+	};
+	feature?: {
+		getProperty(name: string): unknown;
+		[key: string]: unknown;
+	};
+}
+
+// Interface for Google Maps objects
+interface GoogleMapInstance {
+	panTo(latLng: { lat: number; lng: number }): void;
+	setZoom(zoom: number): void;
+	data: {
+		addGeoJson(geoJson: object): void;
+		loadGeoJson(url: string): void;
+		setStyle(style: object): void;
+		addListener(event: string, handler: (event: GoogleMapsClickEvent) => void): void;
+		forEach(callback: (feature: unknown) => void): void;
+		remove(feature: unknown): void;
+	};
+	[key: string]: unknown;
+}
+
+interface GoogleMarkerInstance {
+	setMap(map: GoogleMapInstance | null): void;
+	addListener(event: string, handler: () => void): void;
+	[key: string]: unknown;
+}
+
+interface GoogleInfoWindowInstance {
+	open(map: GoogleMapInstance, marker?: GoogleMarkerInstance): void;
+	close(): void;
+	addListener(event: string, handler: () => void): void;
+	[key: string]: unknown;
+}
+
+interface GoogleKmlLayerInstance {
+	setMap(map: GoogleMapInstance | null): void;
+	getStatus(): string;
+	addListener(event: string, handler: (event?: GoogleMapsClickEvent) => void): void;
+	[key: string]: unknown;
+}
+
+interface GoogleHeatmapLayerInstance {
+	setMap(map: GoogleMapInstance | null): void;
+	[key: string]: unknown;
+}
+
 interface MarkerData {
 	position: { lat: number; lng: number };
 	title?: string;
@@ -32,6 +88,26 @@ interface HeatmapOptions {
 	dissipating?: boolean;
 }
 
+interface KMLOptions {
+	url?: string;
+	visible?: boolean;
+	preserveBounds?: boolean;
+	suppressInfoWindows?: boolean;
+}
+
+interface GeoJSONOptions {
+	data?: object;
+	url?: string;
+	visible?: boolean;
+	style?: {
+		strokeColor?: string;
+		strokeOpacity?: number;
+		strokeWeight?: number;
+		fillColor?: string;
+		fillOpacity?: number;
+	};
+}
+
 interface GoogleMapProps {
 	center?: { lat: number; lng: number };
 	zoom?: number;
@@ -41,6 +117,8 @@ interface GoogleMapProps {
 	markers?: MarkerData[]; // Keep for backward compatibility
 	markerGroups?: MarkerGroup[];
 	heatmap?: HeatmapOptions;
+	kmlLayer?: KMLOptions;
+	geoJsonLayer?: GeoJSONOptions;
 	selectedPoint?: { lat: number; lng: number; zoom?: number };
 	onPointClick?: (point: { lat: number; lng: number; title?: string; group?: string }) => void;
 	searchablePoints?: Array<{
@@ -51,6 +129,9 @@ interface GoogleMapProps {
 		tags?: string[];
 		group?: string;
 	}>;
+	onKMLToggle?: (visible: boolean) => void;
+	onGeoJSONToggle?: (visible: boolean) => void;
+	showLayerControls?: boolean;
 }
 
 // Disable ESLint for Google Maps global since it's external
@@ -72,22 +153,27 @@ export default function GoogleMap({
 	markers = [],
 	markerGroups = [],
 	heatmap,
+	kmlLayer,
+	geoJsonLayer,
 	selectedPoint,
 	onPointClick,
 	searchablePoints = [],
+	onKMLToggle,
+	onGeoJSONToggle,
+	showLayerControls = false,
 }: GoogleMapProps) {
 	const mapRef = useRef<HTMLDivElement>(null);
 	const [isLoaded, setIsLoaded] = useState(false);
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const mapInstanceRef = useRef<any>(null);
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const markersRef = useRef<any[]>([]);
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const groupMarkersRef = useRef<Map<string, any[]>>(new Map());
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const heatmapRef = useRef<any>(null);
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const infoWindowRef = useRef<any>(null);
+	const mapInstanceRef = useRef<GoogleMapInstance | null>(null);
+	const markersRef = useRef<GoogleMarkerInstance[]>([]);
+	const groupMarkersRef = useRef<Map<string, GoogleMarkerInstance[]>>(new Map());
+	const heatmapRef = useRef<GoogleHeatmapLayerInstance | null>(null);
+	const kmlLayerRef = useRef<GoogleKmlLayerInstance | null>(null);
+	const geoJsonLayerRef = useRef<boolean | null>(null);
+	const kmlFallbackFeaturesRef = useRef<unknown[]>([]); // Track fallback GeoJSON features
+	const infoWindowRef = useRef<GoogleInfoWindowInstance | null>(null);
+	const [kmlVisible, setKmlVisible] = useState(kmlLayer?.visible ?? false);
+	const [geoJsonVisible, setGeoJsonVisible] = useState(geoJsonLayer?.visible ?? false);
 
 	// Helper function to create custom marker icon
 	const createCustomIcon = (color: string = "#FF0000", label?: string) => {
@@ -251,7 +337,7 @@ export default function GoogleMap({
 				if (group.visible !== false) {
 					// Default to visible unless explicitly set to false
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const groupMarkers: any[] = [];
+					const groupMarkers: GoogleMarkerInstance[] = [];
 
 					group.markers.forEach((markerData, index) => {
 						const customIcon = group.icon || createCustomIcon(group.color || "#FF0000");
@@ -394,6 +480,181 @@ export default function GoogleMap({
 		}
 	}, [heatmap, isLoaded]);
 
+	// Effect to handle KML layer
+	useEffect(() => {
+		console.log("🔄 KML Effect triggered:", {
+			mapInstanceLoaded: !!mapInstanceRef.current,
+			isLoaded,
+			kmlLayerProvided: !!kmlLayer,
+			kmlVisible,
+			kmlLayerUrl: kmlLayer?.url,
+			currentKmlLayerRef: !!kmlLayerRef.current,
+		});
+
+		if (mapInstanceRef.current && isLoaded && kmlLayer) {
+			console.log("✅ All conditions met for KML layer processing");
+
+			// Clear existing KML layer
+			if (kmlLayerRef.current) {
+				console.log("🗑️ Clearing existing KML layer");
+				kmlLayerRef.current.setMap(null);
+				kmlLayerRef.current = null;
+			}
+
+			// Clear any fallback GeoJSON features from previous KML attempts
+			if (kmlFallbackFeaturesRef.current.length > 0 && mapInstanceRef.current) {
+				console.log("🗑️ Clearing KML fallback GeoJSON features");
+				// Clear all data features (since we can't selectively remove just fallback ones)
+				mapInstanceRef.current.data.forEach((feature) => {
+					mapInstanceRef.current!.data.remove(feature);
+				});
+				kmlFallbackFeaturesRef.current = [];
+			}
+
+			// Create new KML layer if URL is provided and visible
+			if (kmlLayer.url && kmlVisible) {
+				console.log("🌐 Creating new KML layer with URL:", kmlLayer.url);
+				console.log("🌐 URL type:", typeof kmlLayer.url);
+				console.log("🌐 Is absolute URL?", kmlLayer.url.startsWith("http"));
+				console.log("🌐 Full URL for debugging:", kmlLayer.url);
+
+				try {
+					const kmlLayerInstance = new window.google.maps.KmlLayer({
+						url: kmlLayer.url,
+						preserveBounds: kmlLayer.preserveBounds ?? false,
+						suppressInfoWindows: kmlLayer.suppressInfoWindows ?? false,
+						map: mapInstanceRef.current,
+					});
+
+					console.log("✅ KML layer instance created successfully:", kmlLayerInstance);
+					kmlLayerRef.current = kmlLayerInstance;
+
+					// Add status change listener
+					kmlLayerInstance.addListener("status_changed", () => {
+						const status = kmlLayerInstance.getStatus();
+						console.log("📊 KML layer status changed:", status);
+						if (status === "DOCUMENT_NOT_FOUND") {
+							console.error("❌ KML document not found at:", kmlLayer.url);
+						} else if (status === "DOCUMENT_TOO_LARGE") {
+							console.error("❌ KML document too large");
+						} else if (status === "FETCH_ERROR") {
+							console.error("❌ Error fetching KML document");
+						} else if (status === "INVALID_DOCUMENT") {
+							console.error("❌ Invalid KML document");
+						} else if (status === "INVALID_REQUEST") {
+							console.error("❌ Invalid KML request for URL:", kmlLayer.url);
+							console.error("❌ KmlLayer requires absolute URLs (http/https)");
+							console.error("❌ Current URL type:", typeof kmlLayer.url, "| Starts with http:", kmlLayer.url?.startsWith("http") || false);
+							console.error("❌ Recommendation: Use GeoJSON layer for local files instead");
+							console.log("🔄 Attempting to load as GeoJSON instead...");
+
+							// Try to load as GeoJSON instead
+							if (kmlLayer.url && mapInstanceRef.current) {
+								const geoJsonUrl = kmlLayer.url.replace(".kml", ".geojson");
+								console.log("🔄 Loading GeoJSON from:", geoJsonUrl);
+								try {
+									// Load GeoJSON
+									mapInstanceRef.current.data.loadGeoJson(geoJsonUrl);
+
+									// Mark that we have fallback data loaded
+									kmlFallbackFeaturesRef.current = [true]; // Simple flag to track fallback state
+									console.log("🔄 Fallback GeoJSON loaded and tracked for cleanup");
+
+									// Apply KML-like styling for the fallback
+									mapInstanceRef.current.data.setStyle({
+										strokeColor: "#FF0000",
+										strokeOpacity: 0.8,
+										strokeWeight: 2,
+										fillColor: "#FF0000",
+										fillOpacity: 0.35,
+									});
+
+									console.log("✅ Loaded KML data as GeoJSON successfully!");
+								} catch (geoJsonError) {
+									console.error("❌ Failed to load as GeoJSON:", geoJsonError);
+								}
+							}
+						} else if (status === "LIMITS_EXCEEDED") {
+							console.error("❌ KML limits exceeded");
+						} else if (status === "OK") {
+							console.log("✅ KML layer loaded successfully!");
+						} else if (status === "UNKNOWN_ERROR") {
+							console.error("❌ Unknown error loading KML");
+						}
+					});
+
+					// Add click listener for KML features
+					kmlLayerInstance.addListener("click", (event: GoogleMapsClickEvent) => {
+						console.log("🖱️ KML feature clicked:", event);
+						if (onPointClick && event.latLng) {
+							onPointClick({
+								lat: event.latLng.lat(),
+								lng: event.latLng.lng(),
+								title: event.featureData?.name || "KML Feature",
+								group: "KML Layer",
+							});
+						}
+					});
+				} catch (error) {
+					console.error("❌ Error creating KML layer:", error);
+				}
+			} else {
+				console.log("⚠️ KML layer not created. URL:", kmlLayer.url, "Visible:", kmlVisible);
+			}
+		} else {
+			console.log("⚠️ KML layer conditions not met:", {
+				mapInstance: !!mapInstanceRef.current,
+				isLoaded,
+				kmlLayer: !!kmlLayer,
+			});
+		}
+	}, [kmlLayer, kmlVisible, isLoaded]);
+
+	// Effect to handle GeoJSON layer
+	useEffect(() => {
+		if (mapInstanceRef.current && isLoaded && geoJsonLayer) {
+			// Clear existing GeoJSON features
+			if (geoJsonLayerRef.current) {
+				if (mapInstanceRef.current) {
+					mapInstanceRef.current.data.forEach((feature: unknown) => {
+						mapInstanceRef.current!.data.remove(feature);
+					});
+				}
+				geoJsonLayerRef.current = null;
+			}
+
+			// Load new GeoJSON data if provided and visible
+			if (geoJsonVisible && (geoJsonLayer.data || geoJsonLayer.url)) {
+				if (geoJsonLayer.data) {
+					// Load from data object
+					mapInstanceRef.current.data.addGeoJson(geoJsonLayer.data);
+				} else if (geoJsonLayer.url) {
+					// Load from URL
+					mapInstanceRef.current.data.loadGeoJson(geoJsonLayer.url);
+				}
+
+				// Apply styling
+				if (geoJsonLayer.style) {
+					mapInstanceRef.current.data.setStyle(geoJsonLayer.style);
+				}
+
+				// Add click listener for GeoJSON features
+				mapInstanceRef.current.data.addListener("click", (event: GoogleMapsClickEvent) => {
+					if (onPointClick && event.latLng) {
+						onPointClick({
+							lat: event.latLng.lat(),
+							lng: event.latLng.lng(),
+							title: (event.feature?.getProperty("name") as string) || "GeoJSON Feature",
+							group: "GeoJSON Layer",
+						});
+					}
+				});
+
+				geoJsonLayerRef.current = true;
+			}
+		}
+	}, [geoJsonLayer, geoJsonVisible, isLoaded]);
+
 	// Effect to handle selected point navigation
 	useEffect(() => {
 		if (mapInstanceRef.current && selectedPoint) {
@@ -432,6 +693,23 @@ export default function GoogleMap({
 		}
 	}, [selectedPoint]);
 
+	// Toggle functions
+	const toggleKML = () => {
+		const newVisible = !kmlVisible;
+		setKmlVisible(newVisible);
+		if (onKMLToggle) {
+			onKMLToggle(newVisible);
+		}
+	};
+
+	const toggleGeoJSON = () => {
+		const newVisible = !geoJsonVisible;
+		setGeoJsonVisible(newVisible);
+		if (onGeoJSONToggle) {
+			onGeoJSONToggle(newVisible);
+		}
+	};
+
 	if (!isLoaded) {
 		return (
 			<div
@@ -448,9 +726,43 @@ export default function GoogleMap({
 
 	return (
 		<div
-			ref={mapRef}
-			className={`rounded-lg border border-gray-300 shadow-lg ${className}`}
+			className={`relative ${className}`}
 			style={{ height, width }}
-		/>
+		>
+			{/* Layer Controls */}
+			{showLayerControls && (
+				<div className="absolute top-4 right-4 z-10 bg-white rounded-lg shadow-lg p-3 space-y-2">
+					<div className="text-sm font-semibold text-gray-700 mb-2">Map Layers</div>
+					{kmlLayer && (
+						<label className="flex items-center space-x-2 text-sm">
+							<input
+								type="checkbox"
+								checked={kmlVisible}
+								onChange={toggleKML}
+								className="rounded border-gray-300"
+							/>
+							<span className="text-gray-700">KML Layer</span>
+						</label>
+					)}
+					{geoJsonLayer && (
+						<label className="flex items-center space-x-2 text-sm">
+							<input
+								type="checkbox"
+								checked={geoJsonVisible}
+								onChange={toggleGeoJSON}
+								className="rounded border-gray-300"
+							/>
+							<span className="text-gray-700">GeoJSON Layer</span>
+						</label>
+					)}
+				</div>
+			)}
+
+			{/* Map Container */}
+			<div
+				ref={mapRef}
+				className="rounded-lg border border-gray-300 shadow-lg w-full h-full"
+			/>
+		</div>
 	);
 }
