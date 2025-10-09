@@ -435,8 +435,8 @@ export default function GoogleMap({
 					kmlAbortControllerRef.current = null;
 				}
 			} catch (error) {
-				// Don't log error if operation was cancelled
-				if (!abortController.signal.aborted) {
+				// Don't log error if operation was cancelled (AbortError is expected)
+				if (!abortController.signal.aborted && !(error instanceof Error && error.name === "AbortError")) {
 					console.error("❌ Enhanced KML effect error:", error);
 				}
 

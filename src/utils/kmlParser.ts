@@ -89,7 +89,10 @@ export async function parseKMLFile(kmlUrl: string, abortSignal?: AbortSignal): P
 			success: true,
 		};
 	} catch (error) {
-		console.error("❌ Error parsing KML:", error);
+		// Don't log AbortError as it's expected when operations are cancelled
+		if (!(error instanceof Error && error.name === "AbortError")) {
+			console.error("❌ Error parsing KML:", error);
+		}
 		return {
 			features: [],
 			markers: [],
