@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState, type JSX } from "react";
 import { parseKMLFile, type KMLFeature, type KMLMarker } from "@/utils/kmlParser";
+import { Toggle, GooeyFilter } from "./LiquidToggle";
 
 interface GoogleMapProps {
 	center?: { lat: number; lng: number };
@@ -449,51 +450,47 @@ export default function GoogleMap({
 		>
 			{/* Layer Controls */}
 			{showLayerControls && (
-				<div className="absolute top-4 right-4 z-10 bg-white rounded-lg shadow-lg p-3 space-y-2">
+				<div className="absolute top-4 right-4 z-10 bg-white rounded-lg shadow-lg p-3 space-y-3">
 					<div className="text-sm font-semibold text-gray-700 mb-2">Map Layers</div>
 					{kmlLayer && (
-						<label className="flex items-center space-x-2 text-sm">
-							<input
-								type="checkbox"
-								checked={kmlVisible}
-								onChange={toggleKML}
-								className="rounded border-gray-300"
-							/>
+						<div className="flex items-center justify-between text-sm">
 							<span className="text-gray-700">KML Layer</span>
-						</label>
+							<Toggle
+								checked={kmlVisible}
+								onCheckedChange={toggleKML}
+								variant="success"
+							/>
+						</div>
 					)}
 					{markerGroups.length > 0 && (
-						<label className="flex items-center space-x-2 text-sm">
-							<input
-								type="checkbox"
-								checked={markersVisible}
-								onChange={toggleMarkers}
-								className="rounded border-gray-300"
-							/>
+						<div className="flex items-center justify-between text-sm">
 							<span className="text-gray-700">Markers</span>
-						</label>
+							<Toggle
+								checked={markersVisible}
+								onCheckedChange={toggleMarkers}
+								variant="default"
+							/>
+						</div>
 					)}
 					{heatmap && (
-						<label className="flex items-center space-x-2 text-sm">
-							<input
-								type="checkbox"
-								checked={heatmapVisible}
-								onChange={toggleHeatmap}
-								className="rounded border-gray-300"
-							/>
+						<div className="flex items-center justify-between text-sm">
 							<span className="text-gray-700">Heatmap</span>
-						</label>
+							<Toggle
+								checked={heatmapVisible}
+								onCheckedChange={toggleHeatmap}
+								variant="warning"
+							/>
+						</div>
 					)}
 					{geoJsonLayer && (
-						<label className="flex items-center space-x-2 text-sm">
-							<input
-								type="checkbox"
-								checked={geoJsonVisible}
-								onChange={toggleGeoJSON}
-								className="rounded border-gray-300"
-							/>
+						<div className="flex items-center justify-between text-sm">
 							<span className="text-gray-700">GeoJSON Layer</span>
-						</label>
+							<Toggle
+								checked={geoJsonVisible}
+								onCheckedChange={toggleGeoJSON}
+								variant="default"
+							/>
+						</div>
 					)}
 				</div>
 			)}
@@ -503,6 +500,9 @@ export default function GoogleMap({
 				ref={mapRef}
 				className="rounded-lg border border-gray-300 shadow-lg w-full h-full"
 			/>
+
+			{/* Add the GooeyFilter for the liquid toggle effects */}
+			<GooeyFilter />
 		</div>
 	);
 }

@@ -2,6 +2,7 @@
 
 import GoogleMap from "@/components/GoogleMap";
 import Sidebar from "@/components/Sidebar";
+import { Toggle, GooeyFilter } from "@/components/LiquidToggle";
 import { useState, useEffect } from "react";
 import { parseKMLFile, type KMLFeature, type KMLMarker } from "@/utils/kmlParser";
 
@@ -351,13 +352,7 @@ export default function Home() {
 						<h3 className="text-sm font-medium text-gray-300 mb-3">Map Layers</h3>
 						<div className="space-y-3">
 							{/* KML Layer Toggle */}
-							<label className="flex items-center space-x-3 cursor-pointer group">
-								<input
-									type="checkbox"
-									checked={kmlLayerVisible}
-									onChange={(e) => handleKMLToggle(e.target.checked)}
-									className="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500/50"
-								/>
+							<div className="flex items-center justify-between cursor-pointer group">
 								<div className="flex-1">
 									<div className="flex items-center space-x-2">
 										<span className="text-sm font-medium text-gray-200">🗺️ KML Boundaries</span>
@@ -371,16 +366,15 @@ export default function Home() {
 									</div>
 									<p className="text-xs text-gray-400 mt-0.5">Nashik Gramin boundaries (auto-fallback)</p>
 								</div>
-							</label>
+								<Toggle
+									checked={kmlLayerVisible}
+									onCheckedChange={handleKMLToggle}
+									variant="success"
+								/>
+							</div>
 
 							{/* Points/Markers Layer Toggle */}
-							<label className="flex items-center space-x-3 cursor-pointer group">
-								<input
-									type="checkbox"
-									checked={markersVisible}
-									onChange={(e) => handleMarkersToggle(e.target.checked)}
-									className="rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500/50"
-								/>
+							<div className="flex items-center justify-between cursor-pointer group">
 								<div className="flex-1">
 									<div className="flex items-center space-x-2">
 										<span className="text-sm font-medium text-gray-200">📍 Points of Interest</span>
@@ -394,16 +388,15 @@ export default function Home() {
 									</div>
 									<p className="text-xs text-gray-400 mt-0.5">Restaurants, parks, hotels & stations</p>
 								</div>
-							</label>
+								<Toggle
+									checked={markersVisible}
+									onCheckedChange={handleMarkersToggle}
+									variant="default"
+								/>
+							</div>
 
 							{/* Heatmap Layer Toggle */}
-							<label className="flex items-center space-x-3 cursor-pointer group">
-								<input
-									type="checkbox"
-									checked={heatmapVisible}
-									onChange={(e) => handleHeatmapToggle(e.target.checked)}
-									className="rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-orange-500/50"
-								/>
+							<div className="flex items-center justify-between cursor-pointer group">
 								<div className="flex-1">
 									<div className="flex items-center space-x-2">
 										<span className="text-sm font-medium text-gray-200">🔥 Activity Heatmap</span>
@@ -417,16 +410,15 @@ export default function Home() {
 									</div>
 									<p className="text-xs text-gray-400 mt-0.5">Population & activity density</p>
 								</div>
-							</label>
+								<Toggle
+									checked={heatmapVisible}
+									onCheckedChange={handleHeatmapToggle}
+									variant="warning"
+								/>
+							</div>
 
 							{/* GeoJSON Layer Toggle */}
-							<label className="flex items-center space-x-3 cursor-pointer group">
-								<input
-									type="checkbox"
-									checked={geoJsonLayerVisible}
-									onChange={(e) => handleGeoJSONToggle(e.target.checked)}
-									className="rounded border-gray-600 bg-gray-700 text-cyan-500 focus:ring-cyan-500/50"
-								/>
+							<div className="flex items-center justify-between cursor-pointer group">
 								<div className="flex-1">
 									<div className="flex items-center space-x-2">
 										<span className="text-sm font-medium text-gray-200">🗺️ GeoJSON Layer</span>
@@ -440,7 +432,12 @@ export default function Home() {
 									</div>
 									<p className="text-xs text-gray-400 mt-0.5">Alternative boundary display</p>
 								</div>
-							</label>
+								<Toggle
+									checked={geoJsonLayerVisible}
+									onCheckedChange={handleGeoJSONToggle}
+									variant="default"
+								/>
+							</div>
 						</div>
 
 						{/* Layer Statistics */}
@@ -482,6 +479,9 @@ export default function Home() {
 					showLayerControls={false}
 				/>
 			</div>
+
+			{/* Add the GooeyFilter for the liquid toggle effects */}
+			<GooeyFilter />
 		</>
 	);
 }

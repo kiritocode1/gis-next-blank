@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Toggle, GooeyFilter } from "./LiquidToggle";
 
 // Simple icon components to avoid external dependencies
 const MapIcon = ({ className }: { className?: string }) => (
@@ -179,10 +180,10 @@ export default function Sidebar({ children }: SidebarProps) {
 			{/* Sidebar Container */}
 			<div className="relative flex pointer-events-auto">
 				{/* Icon Bar */}
-				<div className="w-16 bg-gray-800/95 backdrop-blur-sm border-r border-gray-700/50 flex flex-col items-center py-4 space-y-2 shadow-lg">
+				<div className="w-16 bg-black/90 backdrop-blur-sm border-r border-gray-900/50 flex flex-col items-center py-4 space-y-2 shadow-xl">
 					{/* Logo */}
-					<div className="mb-6 p-2 rounded-lg bg-blue-600/20 border border-blue-500/30">
-						<MapIcon className="w-6 h-6 text-blue-400" />
+					<div className="mb-6 p-2 rounded-lg bg-gray-900/30 border border-gray-800/40">
+						<MapIcon className="w-6 h-6 text-gray-200" />
 					</div>
 
 					{/* Section Icons */}
@@ -197,7 +198,7 @@ export default function Sidebar({ children }: SidebarProps) {
 								className={`
                   group relative w-10 h-10 rounded-lg flex items-center justify-center
                   transition-all duration-200 ease-out
-                  ${isActive ? "bg-blue-600/30 border border-blue-500/50 text-blue-300" : "hover:bg-gray-700/50 text-gray-400 hover:text-gray-200"}
+                  ${isActive ? "bg-gray-900/40 border border-gray-800/60 text-gray-100" : "hover:bg-gray-900/30 text-gray-400 hover:text-gray-100"}
                 `}
 								title={section.title}
 							>
@@ -215,7 +216,7 @@ export default function Sidebar({ children }: SidebarProps) {
 				{/* Expandable Content Panel */}
 				<div
 					className={`
-          bg-gray-800/95 backdrop-blur-sm border-r border-gray-700/50 shadow-xl
+          bg-black/90 backdrop-blur-sm border-r border-gray-900/50 shadow-xl
           transition-all duration-300 ease-out overflow-hidden
           ${isOpen && activeSection ? "w-80" : "w-0"}
         `}
@@ -223,7 +224,7 @@ export default function Sidebar({ children }: SidebarProps) {
 					{activeSection && (
 						<div className="h-full flex flex-col">
 							{/* Header */}
-							<div className="p-4 border-b border-gray-700/50">
+							<div className="p-4 border-b border-gray-900/50">
 								<div className="flex items-center justify-between">
 									<div>
 										<h2 className="text-lg font-semibold text-white">{sidebarSections.find((s) => s.id === activeSection)?.title}</h2>
@@ -231,7 +232,7 @@ export default function Sidebar({ children }: SidebarProps) {
 									</div>
 									<button
 										onClick={() => setActiveSection(null)}
-										className="p-1 rounded-md hover:bg-gray-700/50 text-gray-400 hover:text-gray-200 transition-colors"
+										className="p-1 rounded-md hover:bg-gray-900/50 text-gray-400 hover:text-gray-100 transition-colors"
 									>
 										<ChevronLeftIcon className="w-4 h-4" />
 									</button>
@@ -250,7 +251,7 @@ export default function Sidebar({ children }: SidebarProps) {
 												<input
 													type="text"
 													placeholder="Search locations..."
-													className="w-full pl-10 pr-4 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
+													className="w-full pl-10 pr-4 py-2 bg-gray-900/50 border border-gray-800/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-600/50 focus:border-gray-600/50"
 												/>
 											</div>
 
@@ -260,7 +261,7 @@ export default function Sidebar({ children }: SidebarProps) {
 													{["Union Square", "Golden Gate Park", "Fisherman's Wharf"].map((location) => (
 														<button
 															key={location}
-															className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-700/50 text-gray-300 hover:text-white transition-colors"
+															className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-900/50 text-gray-300 hover:text-white transition-colors"
 														>
 															📍 {location}
 														</button>
@@ -274,7 +275,7 @@ export default function Sidebar({ children }: SidebarProps) {
 										<div className="space-y-4">
 											<div className="space-y-3">
 												<label className="block text-sm font-medium text-gray-300">Map Style</label>
-												<select className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50">
+												<select className="w-full px-3 py-2 bg-gray-900/50 border border-gray-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-gray-600/50">
 													<option>Standard</option>
 													<option>Satellite</option>
 													<option>Terrain</option>
@@ -289,7 +290,7 @@ export default function Sidebar({ children }: SidebarProps) {
 													min="1"
 													max="20"
 													defaultValue="10"
-													className="w-full accent-blue-500"
+													className="w-full accent-gray-600"
 												/>
 											</div>
 										</div>
@@ -299,28 +300,19 @@ export default function Sidebar({ children }: SidebarProps) {
 										<div className="space-y-4">
 											<div className="space-y-3">
 												<h3 className="text-sm font-medium text-gray-300">Preferences</h3>
-												<div className="space-y-2">
-													<label className="flex items-center space-x-3">
-														<input
-															type="checkbox"
-															className="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500/50"
-														/>
+												<div className="space-y-4">
+													<div className="flex items-center justify-between">
 														<span className="text-sm text-gray-300">Auto-save map state</span>
-													</label>
-													<label className="flex items-center space-x-3">
-														<input
-															type="checkbox"
-															className="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500/50"
-														/>
+														<Toggle variant="default" />
+													</div>
+													<div className="flex items-center justify-between">
 														<span className="text-sm text-gray-300">Show coordinates</span>
-													</label>
-													<label className="flex items-center space-x-3">
-														<input
-															type="checkbox"
-															className="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500/50"
-														/>
+														<Toggle variant="success" />
+													</div>
+													<div className="flex items-center justify-between">
 														<span className="text-sm text-gray-300">Enable clustering</span>
-													</label>
+														<Toggle variant="warning" />
+													</div>
 												</div>
 											</div>
 										</div>
@@ -335,15 +327,18 @@ export default function Sidebar({ children }: SidebarProps) {
 				<button
 					onClick={toggleSidebar}
 					className={`
-            absolute -right-3 top-6 w-6 h-6 bg-gray-700 hover:bg-gray-600 
-            rounded-full border border-gray-600 flex items-center justify-center
-            text-gray-300 hover:text-white transition-all duration-200 z-20 shadow-lg
+            absolute -right-3 top-6 w-6 h-6 bg-gray-900 hover:bg-gray-800 
+            rounded-full border border-gray-800 flex items-center justify-center
+            text-gray-300 hover:text-white transition-all duration-200 z-20 shadow-xl
             ${!isOpen ? "right-2" : ""}
           `}
 				>
 					{isOpen ? <ChevronLeftIcon className="w-3 h-3" /> : <ChevronRightIcon className="w-3 h-3" />}
 				</button>
 			</div>
+
+			{/* Add the GooeyFilter for the liquid toggle effects */}
+			<GooeyFilter />
 		</div>
 	);
 }
