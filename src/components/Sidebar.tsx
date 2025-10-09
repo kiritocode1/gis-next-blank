@@ -176,7 +176,7 @@ export default function Sidebar({ children }: SidebarProps) {
 	};
 
 	return (
-		<div className="fixed left-0 top-0 h-full z-50 flex pointer-events-none">
+		<div className="fixed left-0 top-16 h-[calc(100vh-4rem)] z-50 flex pointer-events-none">
 			{/* Sidebar Container */}
 			<div className="relative flex pointer-events-auto">
 				{/* Icon Bar */}
@@ -322,7 +322,6 @@ export default function Sidebar({ children }: SidebarProps) {
 						</div>
 					)}
 				</div>
-
 			</div>
 
 			{/* Add the GooeyFilter for the liquid toggle effects */}

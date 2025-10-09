@@ -100,6 +100,8 @@ export default function GoogleMap({
 	const kmlPolygonsRef = useRef<any[]>([]);
 	const kmlMarkersRef = useRef<any[]>([]);
 	const kmlAbortControllerRef = useRef<AbortController | null>(null);
+	const geoJsonAbortControllerRef = useRef<AbortController | null>(null);
+	const geoJsonFeaturesRef = useRef<any[]>([]);
 	const infoWindowRef = useRef<any>(null);
 	const [kmlVisible, setKmlVisible] = useState(kmlLayer?.visible ?? false);
 	const [geoJsonVisible, setGeoJsonVisible] = useState(geoJsonLayer?.visible ?? false);
@@ -540,31 +542,185 @@ export default function GoogleMap({
 		handleEnhancedKML();
 	}, [kmlLayer, kmlVisible, isLoaded, onPointClick]);
 
-	// Handle GeoJSON layer
+	// Enhanced GeoJSON Effect with proper cleanup
 	useEffect(() => {
-		if (mapInstanceRef.current && isLoaded && geoJsonLayer) {
-			if (geoJsonLayerRef.current) {
-				mapInstanceRef.current.data.forEach((feature: any) => {
-					mapInstanceRef.current.data.remove(feature);
-				});
-				geoJsonLayerRef.current = null;
+		const handleEnhancedGeoJSON = async () => {
+			console.log("🌍 GeoJSON Effect triggered:", {
+				mapReady: !!mapInstanceRef.current,
+				isLoaded,
+				hasGeoJsonLayer: !!geoJsonLayer,
+				geoJsonVisible,
+				geoJsonUrl: geoJsonLayer?.url,
+			});
+
+			// ALWAYS clear existing GeoJSON elements first - this is critical
+			console.log("🧹 Starting GeoJSON cleanup process...");
+			console.log("🧹 Current GeoJSON state:", {
+				geoJsonLayerRef: !!geoJsonLayerRef.current,
+				featureCount: geoJsonFeaturesRef.current.length,
+			});
+
+			// Cancel any ongoing GeoJSON loading operations
+			if (geoJsonAbortControllerRef.current) {
+				console.log("🛑 Cancelling ongoing GeoJSON loading...");
+				geoJsonAbortControllerRef.current.abort();
+				geoJsonAbortControllerRef.current = null;
 			}
 
-			if (geoJsonVisible && (geoJsonLayer.data || geoJsonLayer.url)) {
+			// Clear existing GeoJSON features with detailed logging
+			if (mapInstanceRef.current && mapInstanceRef.current.data) {
+				try {
+					// Method 1: Remove all features from the data layer
+					console.log("🧹 Clearing all features from data layer...");
+					mapInstanceRef.current.data.forEach((feature: any) => {
+						mapInstanceRef.current.data.remove(feature);
+					});
+
+					// Method 2: Clear tracked features array
+					if (geoJsonFeaturesRef.current.length > 0) {
+						console.log(`🧹 Removing ${geoJsonFeaturesRef.current.length} tracked features...`);
+						geoJsonFeaturesRef.current.forEach((feature, index) => {
+							if (feature && mapInstanceRef.current && mapInstanceRef.current.data) {
+								try {
+									mapInstanceRef.current.data.remove(feature);
+									console.log(`✅ Feature ${index} removed`);
+								} catch (error) {
+									console.error(`❌ Error removing feature ${index}:`, error);
+								}
+							} else {
+								console.warn(`⚠️ Feature ${index} is invalid:`, feature);
+							}
+						});
+					} else {
+						console.log("🧹 No tracked features to remove");
+					}
+
+					console.log("✅ GeoJSON cleanup completed successfully");
+				} catch (error) {
+					console.error("❌ Error during GeoJSON cleanup:", error);
+				}
+			}
+
+			// Clear the arrays and refs
+			geoJsonFeaturesRef.current = [];
+			geoJsonLayerRef.current = null;
+			console.log("✅ GeoJSON cleanup completed - arrays cleared");
+
+			// If prerequisites not met OR GeoJSON should be hidden, stop here
+			if (!mapInstanceRef.current || !isLoaded || !geoJsonLayer || !geoJsonVisible) {
+				const reason = !mapInstanceRef.current 
+					? "Map not ready" 
+					: !isLoaded 
+					? "Not loaded" 
+					: !geoJsonLayer 
+					? "No GeoJSON layer config" 
+					: !geoJsonVisible 
+					? "GeoJSON toggled OFF" 
+					: "Unknown";
+
+				console.log("⚠️ GeoJSON loading stopped - conditions not met:", {
+					mapReady: !!mapInstanceRef.current,
+					isLoaded,
+					hasGeoJsonLayer: !!geoJsonLayer,
+					geoJsonVisible,
+					reason,
+				});
+
+				if (!geoJsonVisible) {
+					console.log("✅ GeoJSON is toggled OFF - cleanup should have removed all layers");
+				}
+				return;
+			}
+
+			console.log("🌍 Starting GeoJSON loading process...");
+
+			// Create new AbortController for this loading operation
+			const abortController = new AbortController();
+			geoJsonAbortControllerRef.current = abortController;
+
+			try {
 				if (geoJsonLayer.data) {
-					mapInstanceRef.current.data.addGeoJson(geoJsonLayer.data);
+					console.log("📄 Loading GeoJSON from data object...");
+					
+					// Check if operation was cancelled
+					if (abortController.signal.aborted) {
+						console.log("🛑 GeoJSON loading was cancelled");
+						return;
+					}
+
+					const features = mapInstanceRef.current.data.addGeoJson(geoJsonLayer.data);
+					geoJsonFeaturesRef.current.push(...features);
+					console.log(`✅ Added ${features.length} features from data object`);
 				} else if (geoJsonLayer.url) {
-					mapInstanceRef.current.data.loadGeoJson(geoJsonLayer.url);
+					console.log("🌐 Loading GeoJSON from URL:", geoJsonLayer.url);
+					
+					// Check if operation was cancelled
+					if (abortController.signal.aborted) {
+						console.log("🛑 GeoJSON loading was cancelled");
+						return;
+					}
+
+					// Load from URL with promise handling
+					const loadPromise = new Promise<any[]>((resolve, reject) => {
+						mapInstanceRef.current.data.loadGeoJson(geoJsonLayer.url!, {
+							idPropertyName: 'id'
+						}, (features: any[]) => {
+							if (abortController.signal.aborted) {
+								reject(new Error('Operation cancelled'));
+								return;
+							}
+							resolve(features);
+						});
+					});
+
+					const features = await loadPromise;
+					geoJsonFeaturesRef.current.push(...features);
+					console.log(`✅ Added ${features.length} features from URL`);
 				}
 
-				if (geoJsonLayer.style) {
+				// Apply styling if provided
+				if (geoJsonLayer.style && !abortController.signal.aborted) {
+					console.log("🎨 Applying GeoJSON styling...");
 					mapInstanceRef.current.data.setStyle(geoJsonLayer.style);
+					console.log("✅ GeoJSON styling applied");
+				}
+
+				// Add click listeners to features
+				if (!abortController.signal.aborted) {
+					mapInstanceRef.current.data.addListener('click', (event: any) => {
+						if (onPointClick && event.latLng) {
+							onPointClick({
+								lat: event.latLng.lat(),
+								lng: event.latLng.lng(),
+								title: event.feature?.getProperty('name') || 'GeoJSON Feature',
+								group: 'GeoJSON Layer',
+							});
+						}
+					});
 				}
 
 				geoJsonLayerRef.current = true;
+				console.log("✅ GeoJSON loading completed successfully");
+
+				// Clear the abort controller if this is still the current operation
+				if (geoJsonAbortControllerRef.current === abortController) {
+					geoJsonAbortControllerRef.current = null;
+				}
+			} catch (error) {
+				// Don't log error if operation was cancelled (AbortError is expected)
+				if (!abortController.signal.aborted && !(error instanceof Error && error.name === "AbortError")) {
+					console.error("❌ Enhanced GeoJSON effect error:", error);
+				}
+
+				// Clear the abort controller if this is still the current operation
+				if (geoJsonAbortControllerRef.current === abortController) {
+					geoJsonAbortControllerRef.current = null;
+				}
 			}
-		}
-	}, [geoJsonLayer, geoJsonVisible, isLoaded]);
+		};
+
+		handleEnhancedGeoJSON();
+	}, [geoJsonLayer, geoJsonVisible, isLoaded, onPointClick]);
 
 	// Handle selected point navigation
 	useEffect(() => {
