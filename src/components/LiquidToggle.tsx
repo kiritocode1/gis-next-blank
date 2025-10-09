@@ -55,9 +55,15 @@ interface ToggleProps {
 export function Toggle({ checked = false, onCheckedChange, className, variant = "default" }: ToggleProps) {
 	const [isChecked, setIsChecked] = React.useState(checked);
 
+	// Sync internal state with controlled prop
+	React.useEffect(() => {
+		setIsChecked(checked);
+	}, [checked]);
+
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setIsChecked(e.target.checked);
-		onCheckedChange?.(e.target.checked);
+		const newValue = e.target.checked;
+		setIsChecked(newValue);
+		onCheckedChange?.(newValue);
 	};
 
 	return (

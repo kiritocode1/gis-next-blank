@@ -32,17 +32,31 @@ export interface KMLParseResult {
 /**
  * Parse KML file using DOM parsing for maximum compatibility
  */
-export async function parseKMLFile(kmlUrl: string): Promise<KMLParseResult> {
+export async function parseKMLFile(kmlUrl: string, abortSignal?: AbortSignal): Promise<KMLParseResult> {
 	try {
 		console.log("🔄 Parsing KML file:", kmlUrl);
 
-		// Fetch the KML file
-		const response = await fetch(kmlUrl);
+		// Fetch the KML file with abort signal support
+		const response = await fetch(kmlUrl, {
+			signal: abortSignal,
+		});
+
 		if (!response.ok) {
 			throw new Error(`Failed to fetch KML: ${response.status} ${response.statusText}`);
 		}
 
+		// Check if cancelled before processing
+		if (abortSignal?.aborted) {
+			throw new Error("KML parsing was cancelled");
+		}
+
 		const kmlText = await response.text();
+
+		// Check if cancelled before parsing
+		if (abortSignal?.aborted) {
+			throw new Error("KML parsing was cancelled");
+		}
+
 		// Clean the KML text to fix common XML issues
 		const cleanedKmlText = kmlText.trim().replace(/^[\s\S]*?(<\?xml)/, "$1");
 		console.log("📄 KML file size:", cleanedKmlText.length, "characters");
@@ -51,6 +65,11 @@ export async function parseKMLFile(kmlUrl: string): Promise<KMLParseResult> {
 		const parser = new DOMParser();
 		const kmlDoc = parser.parseFromString(cleanedKmlText, "application/xml");
 
+		// Check if cancelled after parsing
+		if (abortSignal?.aborted) {
+			throw new Error("KML parsing was cancelled");
+		}
+
 		// Check for parser errors
 		const parserError = kmlDoc.querySelector("parsererror");
 		if (parserError) {
@@ -58,7 +77,7 @@ export async function parseKMLFile(kmlUrl: string): Promise<KMLParseResult> {
 		}
 
 		// Extract features and markers using direct DOM parsing
-		const result = parseKMLDirect(kmlDoc);
+		const result = parseKMLDirect(kmlDoc, abortSignal);
 
 		console.log("✅ KML parsing completed:", {
 			features: result.features.length,
@@ -83,7 +102,7 @@ export async function parseKMLFile(kmlUrl: string): Promise<KMLParseResult> {
 /**
  * Direct DOM parsing for KML files
  */
-function parseKMLDirect(kmlDoc: Document): { features: KMLFeature[]; markers: KMLMarker[] } {
+function parseKMLDirect(kmlDoc: Document, abortSignal?: AbortSignal): { features: KMLFeature[]; markers: KMLMarker[] } {
 	const features: KMLFeature[] = [];
 	const markers: KMLMarker[] = [];
 
@@ -92,6 +111,10 @@ function parseKMLDirect(kmlDoc: Document): { features: KMLFeature[]; markers: KM
 	console.log("📍 Found placemarks:", placemarks.length);
 
 	placemarks.forEach((placemark, index) => {
+		// Check if cancelled during processing
+		if (abortSignal?.aborted) {
+			return;
+		}
 		const name = placemark.querySelector("name")?.textContent || `Location ${index + 1}`;
 
 		// Extract extended data

@@ -99,6 +99,7 @@ export default function GoogleMap({
 	const geoJsonLayerRef = useRef<boolean | null>(null);
 	const kmlPolygonsRef = useRef<any[]>([]);
 	const kmlMarkersRef = useRef<any[]>([]);
+	const kmlAbortControllerRef = useRef<AbortController | null>(null);
 	const infoWindowRef = useRef<any>(null);
 	const [kmlVisible, setKmlVisible] = useState(kmlLayer?.visible ?? false);
 	const [geoJsonVisible, setGeoJsonVisible] = useState(geoJsonLayer?.visible ?? false);
@@ -218,19 +219,115 @@ export default function GoogleMap({
 	// Enhanced KML Effect using custom parser
 	useEffect(() => {
 		const handleEnhancedKML = async () => {
+			console.log("🎆 KML Effect triggered:", {
+				mapReady: !!mapInstanceRef.current,
+				isLoaded,
+				hasKmlLayer: !!kmlLayer,
+				kmlVisible,
+				kmlUrl: kmlLayer?.url,
+			});
+
+			// ALWAYS clear existing KML elements first - this is critical
+			console.log("🧹 Starting KML cleanup process...");
+			console.log("🧹 Current state:", {
+				kmlLayerRef: !!kmlLayerRef.current,
+				polygonCount: kmlPolygonsRef.current.length,
+				markerCount: kmlMarkersRef.current.length,
+			});
+
+			// Cancel any ongoing KML parsing operations
+			if (kmlAbortControllerRef.current) {
+				console.log("🛑 Cancelling ongoing KML parsing...");
+				kmlAbortControllerRef.current.abort();
+				kmlAbortControllerRef.current = null;
+			}
+
+			if (kmlLayerRef.current) {
+				console.log("🧹 Removing native KML layer");
+				try {
+					kmlLayerRef.current.setMap(null);
+					console.log("✅ Native KML layer removed successfully");
+				} catch (error) {
+					console.error("❌ Error removing native KML layer:", error);
+				}
+				kmlLayerRef.current = null;
+			}
+
+			// Clear custom polygons with detailed logging
+			if (kmlPolygonsRef.current.length > 0) {
+				console.log(`🧹 Removing ${kmlPolygonsRef.current.length} polygons...`);
+				kmlPolygonsRef.current.forEach((polygon, index) => {
+					if (polygon && typeof polygon.setMap === "function") {
+						try {
+							polygon.setMap(null);
+							console.log(`✅ Polygon ${index} removed`);
+						} catch (error) {
+							console.error(`❌ Error removing polygon ${index}:`, error);
+						}
+					} else {
+						console.warn(`⚠️ Polygon ${index} is invalid:`, polygon);
+					}
+				});
+			} else {
+				console.log("🧹 No polygons to remove");
+			}
+
+			// Clear custom markers with detailed logging
+			if (kmlMarkersRef.current.length > 0) {
+				console.log(`🧹 Removing ${kmlMarkersRef.current.length} markers...`);
+				kmlMarkersRef.current.forEach((marker, index) => {
+					if (marker && typeof marker.setMap === "function") {
+						try {
+							marker.setMap(null);
+							console.log(`✅ Marker ${index} removed`);
+						} catch (error) {
+							console.error(`❌ Error removing marker ${index}:`, error);
+						}
+					} else {
+						console.warn(`⚠️ Marker ${index} is invalid:`, marker);
+					}
+				});
+			} else {
+				console.log("🧹 No markers to remove");
+			}
+
+			// Clear the arrays
+			kmlPolygonsRef.current = [];
+			kmlMarkersRef.current = [];
+			console.log("✅ KML cleanup completed - arrays cleared");
+
+			// If prerequisites not met OR KML should be hidden, stop here
 			if (!mapInstanceRef.current || !isLoaded || !kmlLayer || !kmlVisible) {
-				// Clear existing KML elements
-				kmlPolygonsRef.current.forEach((polygon) => polygon.setMap && polygon.setMap(null));
-				kmlMarkersRef.current.forEach((marker) => marker.setMap && marker.setMap(null));
-				kmlPolygonsRef.current = [];
-				kmlMarkersRef.current = [];
+				const reason = !mapInstanceRef.current ? "Map not ready" : !isLoaded ? "Not loaded" : !kmlLayer ? "No KML layer config" : !kmlVisible ? "KML toggled OFF" : "Unknown";
+
+				console.log("⚠️ KML loading stopped - conditions not met:", {
+					mapReady: !!mapInstanceRef.current,
+					isLoaded,
+					hasKmlLayer: !!kmlLayer,
+					kmlVisible,
+					reason,
+				});
+
+				if (!kmlVisible) {
+					console.log("✅ KML is toggled OFF - cleanup should have removed all layers");
+				}
 				return;
 			}
 
-			console.log("🎆 Enhanced KML parsing started for:", kmlLayer.url);
+			console.log("🎆 Starting KML loading process for:", kmlLayer.url);
+
+			// Create new AbortController for this parsing operation
+			const abortController = new AbortController();
+			kmlAbortControllerRef.current = abortController;
 
 			try {
-				const result = await parseKMLFile(kmlLayer.url!);
+				const result = await parseKMLFile(kmlLayer.url!, abortController.signal);
+
+				// Check if this operation was cancelled
+				if (abortController.signal.aborted) {
+					console.log("🛑 KML parsing was cancelled");
+					return;
+				}
 
 				if (result.success) {
 					console.log("✅ KML parsed successfully:", {
@@ -331,11 +428,22 @@ export default function GoogleMap({
 					});
 
 					console.log("✅ KML rendering completed successfully");
-				} else {
-					console.error("❌ Enhanced KML parsing failed:", result.error);
+				}
+
+				// Clear the abort controller if this is still the current operation
+				if (kmlAbortControllerRef.current === abortController) {
+					kmlAbortControllerRef.current = null;
 				}
 			} catch (error) {
-				console.error("❌ Enhanced KML effect error:", error);
+				// Don't log error if operation was cancelled
+				if (!abortController.signal.aborted) {
+					console.error("❌ Enhanced KML effect error:", error);
+				}
+
+				// Clear the abort controller if this is still the current operation
+				if (kmlAbortControllerRef.current === abortController) {
+					kmlAbortControllerRef.current = null;
+				}
 			}
 		};
 
