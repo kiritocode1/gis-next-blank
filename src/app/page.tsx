@@ -303,6 +303,13 @@ export default function Home() {
 
 	return (
 		<>
+			{/* Header */}
+			<div className="fixed top-0 left-0 right-0 z-50 bg-black backdrop-blur-md border-b border-white/10">
+				<div className="flex items-center justify-center h-16 px-6">
+					<h1 className="text-2xl font-bold text-white tracking-wide">NASHIK GIS 2.0</h1>
+				</div>
+			</div>
+
 			<Sidebar>
 				<div className="space-y-4">
 					<div className="space-y-3">
@@ -414,8 +421,8 @@ export default function Home() {
 				</div>
 			</Sidebar>
 
-			{/* Full-screen map positioned behind sidebar */}
-			<div className="fixed inset-0">
+			{/* Full-screen map positioned behind sidebar and header */}
+			<div className="fixed inset-0 pt-16">
 				<GoogleMap
 					center={{ lat: 20.0112771, lng: 74.00833808 }}
 					zoom={10}

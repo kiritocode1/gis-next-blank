@@ -323,18 +323,6 @@ export default function Sidebar({ children }: SidebarProps) {
 					)}
 				</div>
 
-				{/* Toggle Button */}
-				<button
-					onClick={toggleSidebar}
-					className={`
-            absolute -right-3 top-6 w-6 h-6 bg-gray-900 hover:bg-gray-800 
-            rounded-full border border-gray-800 flex items-center justify-center
-            text-gray-300 hover:text-white transition-all duration-200 z-20 shadow-xl
-            ${!isOpen ? "right-2" : ""}
-          `}
-				>
-					{isOpen ? <ChevronLeftIcon className="w-3 h-3" /> : <ChevronRightIcon className="w-3 h-3" />}
-				</button>
 			</div>
 
 			{/* Add the GooeyFilter for the liquid toggle effects */}
