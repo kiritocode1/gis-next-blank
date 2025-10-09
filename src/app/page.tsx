@@ -4,6 +4,7 @@ import GoogleMap from "@/components/GoogleMap";
 import Sidebar from "@/components/Sidebar";
 import { Toggle, GooeyFilter } from "@/components/LiquidToggle";
 import { useState, useEffect } from "react";
+import { fetchCCTVLocations, type CCTVLocation } from "@/services/externalApi";
 
 export default function Home() {
 	// State for selected point and search
@@ -14,6 +15,11 @@ export default function Home() {
 	const [geoJsonLayerVisible, setGeoJsonLayerVisible] = useState(false);
 	const [markersVisible, setMarkersVisible] = useState(true); // Already enabled by default
 	const [heatmapVisible, setHeatmapVisible] = useState(true); // Already enabled by default
+	const [cctvLayerVisible, setCctvLayerVisible] = useState(false); // New CCTV layer toggle
+
+	// External API data state
+	const [cctvLocations, setCctvLocations] = useState<CCTVLocation[]>([]);
+	const [cctvLoading, setCctvLoading] = useState(false);
 
 	// State for absolute URLs (client-side only)
 	const [kmlAbsoluteUrl, setKmlAbsoluteUrl] = useState("/kml/nashik_gramin.kml");
@@ -24,6 +30,27 @@ export default function Home() {
 			setKmlAbsoluteUrl(`${window.location.origin}/kml/nashik_gramin.kml`);
 		}
 	}, []);
+
+	// Load CCTV data when toggle is enabled
+	useEffect(() => {
+		const loadCCTVData = async () => {
+			if (cctvLayerVisible && cctvLocations.length === 0 && !cctvLoading) {
+				setCctvLoading(true);
+				try {
+					console.log("🎥 Loading CCTV data...");
+					const data = await fetchCCTVLocations();
+					setCctvLocations(data);
+					console.log(`✅ Loaded ${data.length} CCTV locations`);
+				} catch (error) {
+					console.error("❌ Failed to load CCTV data:", error);
+				} finally {
+					setCctvLoading(false);
+				}
+			}
+		};
+
+		loadCCTVData();
+	}, [cctvLayerVisible, cctvLocations.length, cctvLoading]);
 
 	// KML Layer configuration
 	// Note: Google Maps KmlLayer requires absolute URLs, so we use window.location.origin
@@ -124,6 +151,27 @@ export default function Home() {
 					title: "Hotel Union Square",
 				},
 			],
+		},
+		// Real CCTV data from external API
+		{
+			name: "CCTV Cameras",
+			color: "#F97316", // Orange
+			visible: cctvLayerVisible,
+			markers: cctvLocations.map((cctv) => ({
+				position: {
+					lat: typeof cctv.latitude === "string" ? parseFloat(cctv.latitude) : cctv.latitude,
+					lng: typeof cctv.longitude === "string" ? parseFloat(cctv.longitude) : cctv.longitude,
+				},
+				title: cctv.name || cctv.location_name || `CCTV ${cctv.id}`,
+				label: cctv.is_working ? "🎥" : "📷",
+				extraData: {
+					address: cctv.address,
+					cameraType: cctv.camera_type,
+					isWorking: cctv.is_working,
+					ward: cctv.ward,
+					installationDate: cctv.installation_date,
+				},
+			})),
 		},
 	];
 
@@ -259,6 +307,13 @@ export default function Home() {
 		console.log("🔥 Page: Heatmap toggle handler called with:", visible);
 		setHeatmapVisible(visible);
 		console.log("🔥 Page: Heatmap toggle completed, new visible state should be:", visible);
+	};
+
+	// Handle CCTV toggle
+	const handleCCTVToggle = (visible: boolean) => {
+		console.log("🎥 Page: CCTV toggle handler called with:", visible);
+		setCctvLayerVisible(visible);
+		console.log("🎥 Page: CCTV toggle completed, new visible state should be:", visible);
 	};
 
 	// Navigate to a specific point
@@ -402,6 +457,29 @@ export default function Home() {
 									variant="default"
 								/>
 							</div>
+
+							{/* CCTV Layer Toggle */}
+							<div className="flex items-center justify-between cursor-pointer group">
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🎥 CCTV Cameras</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												cctvLayerVisible ? "bg-orange-500/20 text-orange-400 border border-orange-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{cctvLayerVisible ? "ON" : "OFF"}
+										</span>
+										{cctvLoading && <div className="w-3 h-3 border border-orange-400 border-t-transparent rounded-full animate-spin"></div>}
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Real-time surveillance cameras ({cctvLocations.length} locations)</p>
+								</div>
+								<Toggle
+									checked={cctvLayerVisible}
+									onCheckedChange={handleCCTVToggle}
+									variant="warning"
+								/>
+							</div>
 						</div>
 
 						{/* Layer Statistics */}
@@ -409,11 +487,15 @@ export default function Home() {
 							<div className="text-xs text-gray-500 space-y-1">
 								<div className="flex justify-between">
 									<span>Active Layers:</span>
-									<span className="font-medium">{[kmlLayerVisible, markersVisible, heatmapVisible, geoJsonLayerVisible].filter(Boolean).length}/4</span>
+									<span className="font-medium">{[kmlLayerVisible, markersVisible, heatmapVisible, geoJsonLayerVisible, cctvLayerVisible].filter(Boolean).length}/5</span>
 								</div>
 								<div className="flex justify-between">
-									<span>Marker Points:</span>
-									<span className="font-medium">{markerGroups.reduce((sum, group) => sum + group.markers.length, 0)}</span>
+									<span>Sample Points:</span>
+									<span className="font-medium">{markerGroups.filter((group) => group.name !== "CCTV Cameras").reduce((sum, group) => sum + group.markers.length, 0)}</span>
+								</div>
+								<div className="flex justify-between">
+									<span>CCTV Cameras:</span>
+									<span className="font-medium text-orange-400">{cctvLocations.length}</span>
 								</div>
 							</div>
 						</div>
@@ -440,6 +522,7 @@ export default function Home() {
 					onGeoJSONToggle={handleGeoJSONToggle}
 					onMarkersToggle={handleMarkersToggle}
 					onHeatmapToggle={handleHeatmapToggle}
+					onCCTVToggle={handleCCTVToggle}
 					showLayerControls={false}
 				/>
 			</div>

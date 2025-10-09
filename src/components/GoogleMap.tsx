@@ -60,6 +60,7 @@ interface GoogleMapProps {
 	onGeoJSONToggle?: (visible: boolean) => void;
 	onMarkersToggle?: (visible: boolean) => void;
 	onHeatmapToggle?: (visible: boolean) => void;
+	onCCTVToggle?: (visible: boolean) => void;
 	showLayerControls?: boolean;
 }
 
@@ -87,6 +88,7 @@ export default function GoogleMap({
 	onGeoJSONToggle,
 	onMarkersToggle,
 	onHeatmapToggle,
+	onCCTVToggle,
 	showLayerControls = false,
 }: GoogleMapProps): JSX.Element {
 	const mapRef = useRef<HTMLDivElement>(null);
@@ -608,15 +610,7 @@ export default function GoogleMap({
 
 			// If prerequisites not met OR GeoJSON should be hidden, stop here
 			if (!mapInstanceRef.current || !isLoaded || !geoJsonLayer || !geoJsonVisible) {
-				const reason = !mapInstanceRef.current 
-					? "Map not ready" 
-					: !isLoaded 
-					? "Not loaded" 
-					: !geoJsonLayer 
-					? "No GeoJSON layer config" 
-					: !geoJsonVisible 
-					? "GeoJSON toggled OFF" 
-					: "Unknown";
+				const reason = !mapInstanceRef.current ? "Map not ready" : !isLoaded ? "Not loaded" : !geoJsonLayer ? "No GeoJSON layer config" : !geoJsonVisible ? "GeoJSON toggled OFF" : "Unknown";
 
 				console.log("⚠️ GeoJSON loading stopped - conditions not met:", {
 					mapReady: !!mapInstanceRef.current,
@@ -641,7 +635,7 @@ export default function GoogleMap({
 			try {
 				if (geoJsonLayer.data) {
 					console.log("📄 Loading GeoJSON from data object...");
-					
+
 					// Check if operation was cancelled
 					if (abortController.signal.aborted) {
 						console.log("🛑 GeoJSON loading was cancelled");
@@ -653,7 +647,7 @@ export default function GoogleMap({
 					console.log(`✅ Added ${features.length} features from data object`);
 				} else if (geoJsonLayer.url) {
 					console.log("🌐 Loading GeoJSON from URL:", geoJsonLayer.url);
-					
+
 					// Check if operation was cancelled
 					if (abortController.signal.aborted) {
 						console.log("🛑 GeoJSON loading was cancelled");
@@ -662,15 +656,19 @@ export default function GoogleMap({
 
 					// Load from URL with promise handling
 					const loadPromise = new Promise<any[]>((resolve, reject) => {
-						mapInstanceRef.current.data.loadGeoJson(geoJsonLayer.url!, {
-							idPropertyName: 'id'
-						}, (features: any[]) => {
-							if (abortController.signal.aborted) {
-								reject(new Error('Operation cancelled'));
-								return;
-							}
-							resolve(features);
-						});
+						mapInstanceRef.current.data.loadGeoJson(
+							geoJsonLayer.url!,
+							{
+								idPropertyName: "id",
+							},
+							(features: any[]) => {
+								if (abortController.signal.aborted) {
+									reject(new Error("Operation cancelled"));
+									return;
+								}
+								resolve(features);
+							},
+						);
 					});
 
 					const features = await loadPromise;
@@ -687,13 +685,13 @@ export default function GoogleMap({
 
 				// Add click listeners to features
 				if (!abortController.signal.aborted) {
-					mapInstanceRef.current.data.addListener('click', (event: any) => {
+					mapInstanceRef.current.data.addListener("click", (event: any) => {
 						if (onPointClick && event.latLng) {
 							onPointClick({
 								lat: event.latLng.lat(),
 								lng: event.latLng.lng(),
-								title: event.feature?.getProperty('name') || 'GeoJSON Feature',
-								group: 'GeoJSON Layer',
+								title: event.feature?.getProperty("name") || "GeoJSON Feature",
+								group: "GeoJSON Layer",
 							});
 						}
 					});

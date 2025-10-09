@@ -1,0 +1,281 @@
+/**
+ * External API service for fetching data from RHTechnology endpoints
+ */
+
+// Base URL for the external API
+const BASE_URL = "https://rhtechnology.in/nashik-gis/app.php";
+
+// Types based on the API documentation
+export interface CCTVLocation {
+	id: string | number;
+	name: string;
+	location_name: string;
+	latitude: string | number;
+	longitude: string | number;
+	address: string;
+	location: string;
+	camera_type: string;
+	type: string;
+	is_working: boolean;
+	ward: string;
+	installation_date: string;
+}
+
+export interface CCTVResponse {
+	success: boolean;
+	data: CCTVLocation[];
+}
+
+export interface PoliceStation {
+	id: string | number;
+	name: string;
+	latitude: string | number;
+	longitude: string | number;
+	address: string;
+	contact_number: string;
+	phone: string;
+	type: string;
+	is_active: boolean;
+	ward: string;
+}
+
+export interface PoliceStationResponse {
+	success: boolean;
+	data: PoliceStation[];
+}
+
+export interface Hospital {
+	id: string | number;
+	name: string;
+	hospital_name: string;
+	latitude: string | number;
+	longitude: string | number;
+	address: string;
+	contact_number: string;
+	phone: string;
+	type: string;
+	specialties: string;
+	is_active: boolean;
+	ward: string;
+}
+
+export interface HospitalResponse {
+	success: boolean;
+	data: Hospital[];
+}
+
+export interface ATMLocation {
+	id: string | number;
+	bank_name: string;
+	name: string;
+	latitude: string | number;
+	longitude: string | number;
+	address: string;
+	is_working: boolean;
+	ward: string;
+}
+
+export interface ATMResponse {
+	success: boolean;
+	data: ATMLocation[];
+}
+
+/**
+ * Fetch CCTV locations from the external API
+ */
+export async function fetchCCTVLocations(): Promise<CCTVLocation[]> {
+	try {
+		console.log("🎥 Fetching CCTV locations from external API...");
+
+		const response = await fetch(`${BASE_URL}?endpoint=get-cctv-locations`, {
+			method: "GET",
+			headers: {
+				Accept: "application/json",
+				"Content-Type": "application/json",
+			},
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const data: CCTVResponse = await response.json();
+
+		if (!data.success) {
+			throw new Error("API returned success: false");
+		}
+
+		console.log(`✅ Fetched ${data.data.length} CCTV locations`);
+
+		// Transform coordinates to numbers and validate data
+		const validLocations = data.data
+			.filter((location) => {
+				const lat = typeof location.latitude === "string" ? parseFloat(location.latitude) : location.latitude;
+				const lng = typeof location.longitude === "string" ? parseFloat(location.longitude) : location.longitude;
+
+				return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+			})
+			.map((location) => ({
+				...location,
+				latitude: typeof location.latitude === "string" ? parseFloat(location.latitude) : location.latitude,
+				longitude: typeof location.longitude === "string" ? parseFloat(location.longitude) : location.longitude,
+			}));
+
+		console.log(`📍 Valid CCTV locations: ${validLocations.length}/${data.data.length}`);
+
+		return validLocations;
+	} catch (error) {
+		console.error("❌ Error fetching CCTV locations:", error);
+		throw error;
+	}
+}
+
+/**
+ * Fetch police station locations from the external API
+ */
+export async function fetchPoliceStations(): Promise<PoliceStation[]> {
+	try {
+		console.log("🚔 Fetching police stations from external API...");
+
+		const response = await fetch(`${BASE_URL}?endpoint=get-police-stations`, {
+			method: "GET",
+			headers: {
+				Accept: "application/json",
+				"Content-Type": "application/json",
+			},
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const data: PoliceStationResponse = await response.json();
+
+		if (!data.success) {
+			throw new Error("API returned success: false");
+		}
+
+		console.log(`✅ Fetched ${data.data.length} police stations`);
+
+		// Transform coordinates to numbers and validate data
+		const validStations = data.data
+			.filter((station) => {
+				const lat = typeof station.latitude === "string" ? parseFloat(station.latitude) : station.latitude;
+				const lng = typeof station.longitude === "string" ? parseFloat(station.longitude) : station.longitude;
+
+				return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+			})
+			.map((station) => ({
+				...station,
+				latitude: typeof station.latitude === "string" ? parseFloat(station.latitude) : station.latitude,
+				longitude: typeof station.longitude === "string" ? parseFloat(station.longitude) : station.longitude,
+			}));
+
+		console.log(`📍 Valid police stations: ${validStations.length}/${data.data.length}`);
+
+		return validStations;
+	} catch (error) {
+		console.error("❌ Error fetching police stations:", error);
+		throw error;
+	}
+}
+
+/**
+ * Fetch hospital locations from the external API
+ */
+export async function fetchHospitals(): Promise<Hospital[]> {
+	try {
+		console.log("🏥 Fetching hospitals from external API...");
+
+		const response = await fetch(`${BASE_URL}?endpoint=get-hospitals`, {
+			method: "GET",
+			headers: {
+				Accept: "application/json",
+				"Content-Type": "application/json",
+			},
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const data: HospitalResponse = await response.json();
+
+		if (!data.success) {
+			throw new Error("API returned success: false");
+		}
+
+		console.log(`✅ Fetched ${data.data.length} hospitals`);
+
+		// Transform coordinates to numbers and validate data
+		const validHospitals = data.data
+			.filter((hospital) => {
+				const lat = typeof hospital.latitude === "string" ? parseFloat(hospital.latitude) : hospital.latitude;
+				const lng = typeof hospital.longitude === "string" ? parseFloat(hospital.longitude) : hospital.longitude;
+
+				return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+			})
+			.map((hospital) => ({
+				...hospital,
+				latitude: typeof hospital.latitude === "string" ? parseFloat(hospital.latitude) : hospital.latitude,
+				longitude: typeof hospital.longitude === "string" ? parseFloat(hospital.longitude) : hospital.longitude,
+			}));
+
+		console.log(`📍 Valid hospitals: ${validHospitals.length}/${data.data.length}`);
+
+		return validHospitals;
+	} catch (error) {
+		console.error("❌ Error fetching hospitals:", error);
+		throw error;
+	}
+}
+
+/**
+ * Fetch ATM locations from the external API
+ */
+export async function fetchATMLocations(): Promise<ATMLocation[]> {
+	try {
+		console.log("🏧 Fetching ATM locations from external API...");
+
+		const response = await fetch(`${BASE_URL}?endpoint=get-atm-locations`, {
+			method: "GET",
+			headers: {
+				Accept: "application/json",
+				"Content-Type": "application/json",
+			},
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const data: ATMResponse = await response.json();
+
+		if (!data.success) {
+			throw new Error("API returned success: false");
+		}
+
+		console.log(`✅ Fetched ${data.data.length} ATM locations`);
+
+		// Transform coordinates to numbers and validate data
+		const validATMs = data.data
+			.filter((atm) => {
+				const lat = typeof atm.latitude === "string" ? parseFloat(atm.latitude) : atm.latitude;
+				const lng = typeof atm.longitude === "string" ? parseFloat(atm.longitude) : atm.longitude;
+
+				return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+			})
+			.map((atm) => ({
+				...atm,
+				latitude: typeof atm.latitude === "string" ? parseFloat(atm.latitude) : atm.latitude,
+				longitude: typeof atm.longitude === "string" ? parseFloat(atm.longitude) : atm.longitude,
+			}));
+
+		console.log(`📍 Valid ATM locations: ${validATMs.length}/${data.data.length}`);
+
+		return validATMs;
+	} catch (error) {
+		console.error("❌ Error fetching ATM locations:", error);
+		throw error;
+	}
+}
