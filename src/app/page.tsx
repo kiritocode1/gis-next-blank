@@ -28,7 +28,13 @@ export default function Home() {
 	const [dial112Calls, setDial112Calls] = useState<Dial112Call[]>([]); // Visible in viewport
 	const [dial112Loading, setDial112Loading] = useState(false);
 	const dial112LoadingRef = useRef(false); // Track if SSE is in progress
-	const [mapBounds, setMapBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
+	const [mapBounds, setMapBounds] = useState<{
+		north: number;
+		south: number;
+		east: number;
+		west: number;
+		zoom: number;
+	} | null>(null);
 
 	// State for absolute URLs (client-side only)
 	const [kmlAbsoluteUrl, setKmlAbsoluteUrl] = useState("/kml/nashik_gramin.kml");
@@ -63,7 +69,6 @@ export default function Home() {
 
 	// Load Dial 112 via SSE (cache all points, no rendering yet)
 	useEffect(() => {
-		let stop: (() => void) | null = null;
 		let buffer: Dial112Call[] = [];
 		let rafHandle: number | null = null;
 
@@ -84,7 +89,7 @@ export default function Home() {
 			dial112LoadingRef.current = true;
 			setDial112Loading(true);
 			setDial112AllCalls([]);
-			stop = streamDial112Calls(
+			streamDial112Calls(
 				(row) => {
 					buffer.push(row);
 					// Batch every 100 rows for caching
@@ -106,11 +111,11 @@ export default function Home() {
 		return () => {
 			// Only cleanup animation frame, NOT the SSE connection
 			if (rafHandle !== null) cancelAnimationFrame(rafHandle);
-			// DON'T call stop() here - let the stream complete
+			// Let the SSE stream complete naturally
 		};
 	}, [dial112Visible, dial112HeatmapVisible]);
 
-	// Filter Dial 112 by viewport bounds
+	// Filter Dial 112 by viewport bounds AND zoom level (decimation)
 	useEffect(() => {
 		if (!dial112Visible) {
 			setDial112Calls([]);
@@ -127,14 +132,31 @@ export default function Home() {
 			return;
 		}
 
-		const { north, south, east, west } = mapBounds;
-		console.log(`🗺️ Map bounds:`, { north, south, east, west });
+		const { north, south, east, west, zoom } = mapBounds;
+		console.log(`🗺️ Map bounds (zoom ${zoom}):`, { north, south, east, west });
 
-		const filtered = dial112AllCalls.filter((call) => {
-			return call.latitude >= south && call.latitude <= north && call.longitude >= west && call.longitude <= east;
+		// Zoom-based decimation strategy:
+		// zoom < 10: Show 1 in 50 points (very zoomed out - state/country level)
+		// zoom 10-11: Show 1 in 20 points (city level)
+		// zoom 12-13: Show 1 in 10 points (district level)
+		// zoom 14-15: Show 1 in 5 points (neighborhood level)
+		// zoom >= 16: Show all points (street level)
+		let skipFactor = 1;
+		if (zoom < 10) skipFactor = 50;
+		else if (zoom < 12) skipFactor = 20;
+		else if (zoom < 14) skipFactor = 10;
+		else if (zoom < 16) skipFactor = 5;
+
+		const filtered = dial112AllCalls.filter((call, index) => {
+			// First check if in viewport
+			const inViewport = call.latitude >= south && call.latitude <= north && call.longitude >= west && call.longitude <= east;
+			if (!inViewport) return false;
+
+			// Then apply decimation based on zoom
+			return index % skipFactor === 0;
 		});
 
-		console.log(`📍 Dial 112: ${filtered.length}/${dial112AllCalls.length} in viewport`);
+		console.log(`📍 Dial 112: ${filtered.length}/${dial112AllCalls.length} in viewport (zoom ${zoom}, skip factor ${skipFactor})`);
 		setDial112Calls(filtered);
 	}, [dial112Visible, mapBounds, dial112AllCalls]);
 

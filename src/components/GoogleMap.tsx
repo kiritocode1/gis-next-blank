@@ -62,7 +62,7 @@ interface GoogleMapProps {
 	onHeatmapToggle?: (visible: boolean) => void;
 	// onCCTVToggle is reserved for future use to avoid breaking API
 	onCCTVToggle?: (visible: boolean) => void;
-	onBoundsChanged?: (bounds: { north: number; south: number; east: number; west: number }) => void;
+	onBoundsChanged?: (bounds: { north: number; south: number; east: number; west: number; zoom: number }) => void;
 	showLayerControls?: boolean;
 }
 
@@ -800,7 +800,8 @@ export default function GoogleMap({
 		const listener = mapInstanceRef.current.addListener("idle", () => {
 			if (!mapInstanceRef.current) return;
 			const bounds = mapInstanceRef.current.getBounds();
-			if (bounds) {
+			const zoom = mapInstanceRef.current.getZoom();
+			if (bounds && zoom !== undefined) {
 				const ne = bounds.getNorthEast();
 				const sw = bounds.getSouthWest();
 				onBoundsChanged({
@@ -808,6 +809,7 @@ export default function GoogleMap({
 					south: sw.lat(),
 					east: ne.lng(),
 					west: sw.lng(),
+					zoom: zoom,
 				});
 			}
 		});
