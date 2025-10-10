@@ -82,15 +82,15 @@ export default function Home() {
 			visible: markersVisible,
 			markers: [
 				{
-					position: { lat: 37.7749, lng: -122.4194 },
+					position: { lat: 20.0113, lng: 74.0083 },
 					title: "Union Square",
 				},
 				{
-					position: { lat: 37.7849, lng: -122.4094 },
+					position: { lat: 20.025, lng: 74.02 },
 					title: "Washington Square Park",
 				},
 				{
-					position: { lat: 37.7549, lng: -122.4494 },
+					position: { lat: 19.995, lng: 73.99 },
 					title: "Golden Gate Park",
 				},
 			],
@@ -101,19 +101,19 @@ export default function Home() {
 			visible: markersVisible,
 			markers: [
 				{
-					position: { lat: 37.7849, lng: -122.4194 },
+					position: { lat: 20.02, lng: 74.005 },
 					title: "Montgomery Station",
 				},
 				{
-					position: { lat: 37.7649, lng: -122.4094 },
+					position: { lat: 19.985, lng: 74.015 },
 					title: "Powell Station",
 				},
 				{
-					position: { lat: 37.7749, lng: -122.3994 },
+					position: { lat: 20.03, lng: 74.03 },
 					title: "Embarcadero Station",
 				},
 				{
-					position: { lat: 37.7549, lng: -122.4194 },
+					position: { lat: 20.0, lng: 74.025 },
 					title: "Civic Center Station",
 				},
 			],
@@ -124,15 +124,15 @@ export default function Home() {
 			visible: markersVisible,
 			markers: [
 				{
-					position: { lat: 37.7949, lng: -122.4194 },
+					position: { lat: 20.04, lng: 74.05 },
 					title: "Tony's Little Star Pizza",
 				},
 				{
-					position: { lat: 37.7849, lng: -122.4294 },
+					position: { lat: 20.015, lng: 74.035 },
 					title: "Fisherman's Wharf Seafood",
 				},
 				{
-					position: { lat: 37.7649, lng: -122.4394 },
+					position: { lat: 19.98, lng: 74.02 },
 					title: "Chinatown Express",
 				},
 			],
@@ -143,11 +143,11 @@ export default function Home() {
 			visible: markersVisible,
 			markers: [
 				{
-					position: { lat: 37.7889, lng: -122.4094 },
+					position: { lat: 20.008, lng: 74.0 },
 					title: "The Ritz-Carlton",
 				},
 				{
-					position: { lat: 37.7789, lng: -122.4194 },
+					position: { lat: 19.998, lng: 74.012 },
 					title: "Hotel Union Square",
 				},
 			],
@@ -175,44 +175,19 @@ export default function Home() {
 		},
 	];
 
-	// Sample heatmap data - population density or activity hotspots
+	// Sample heatmap data - shifted to Nashik Gramin vicinity
 	const heatmapData = {
 		data: [
-			// Downtown SF - High activity
-			{ position: { lat: 37.7749, lng: -122.4194 }, weight: 100 },
-			{ position: { lat: 37.775, lng: -122.4195 }, weight: 90 },
-			{ position: { lat: 37.7748, lng: -122.4193 }, weight: 95 },
-			{ position: { lat: 37.7751, lng: -122.4196 }, weight: 85 },
-
-			// Chinatown area - Medium-high activity
-			{ position: { lat: 37.7849, lng: -122.4094 }, weight: 75 },
-			{ position: { lat: 37.785, lng: -122.4095 }, weight: 70 },
-			{ position: { lat: 37.7848, lng: -122.4093 }, weight: 80 },
-
-			// Financial District - High activity
-			{ position: { lat: 37.7949, lng: -122.3994 }, weight: 90 },
-			{ position: { lat: 37.795, lng: -122.3995 }, weight: 85 },
-			{ position: { lat: 37.7948, lng: -122.3993 }, weight: 95 },
-
-			// Mission District - Medium activity
-			{ position: { lat: 37.7649, lng: -122.4194 }, weight: 60 },
-			{ position: { lat: 37.765, lng: -122.4195 }, weight: 55 },
-			{ position: { lat: 37.7648, lng: -122.4193 }, weight: 65 },
-
-			// Castro District - Medium activity
-			{ position: { lat: 37.7609, lng: -122.435 }, weight: 50 },
-			{ position: { lat: 37.761, lng: -122.4351 }, weight: 45 },
-			{ position: { lat: 37.7608, lng: -122.4349 }, weight: 55 },
-
-			// Fisherman's Wharf - Tourist activity
-			{ position: { lat: 37.8049, lng: -122.4194 }, weight: 70 },
-			{ position: { lat: 37.805, lng: -122.4195 }, weight: 65 },
-			{ position: { lat: 37.8048, lng: -122.4193 }, weight: 75 },
-
-			// Golden Gate Park - Recreational activity
-			{ position: { lat: 37.7694, lng: -122.4862 }, weight: 40 },
-			{ position: { lat: 37.7695, lng: -122.4863 }, weight: 35 },
-			{ position: { lat: 37.7693, lng: -122.4861 }, weight: 45 },
+			{ position: { lat: 20.0113, lng: 74.0083 }, weight: 95 },
+			{ position: { lat: 20.015, lng: 74.012 }, weight: 85 },
+			{ position: { lat: 20.02, lng: 74.02 }, weight: 80 },
+			{ position: { lat: 20.005, lng: 74.0 }, weight: 70 },
+			{ position: { lat: 19.995, lng: 73.995 }, weight: 65 },
+			{ position: { lat: 20.03, lng: 74.03 }, weight: 60 },
+			{ position: { lat: 19.985, lng: 74.015 }, weight: 55 },
+			{ position: { lat: 20.04, lng: 74.05 }, weight: 50 },
+			{ position: { lat: 20.025, lng: 74.02 }, weight: 75 },
+			{ position: { lat: 19.98, lng: 74.02 }, weight: 58 },
 		],
 		visible: heatmapVisible,
 		radius: 25,
@@ -254,7 +229,7 @@ export default function Home() {
 					id: `${group.name.toLowerCase()}-${index}`,
 					position: marker.position,
 					title: marker.title || `${group.name} ${index + 1}`,
-					description: `${group.name} location in San Francisco`,
+					description: `${group.name} location in Nashik Gramin`,
 					tags: [group.name.toLowerCase(), marker.title?.toLowerCase() || ""],
 					group: group.name,
 				});

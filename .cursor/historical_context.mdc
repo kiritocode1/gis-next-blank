@@ -8,30 +8,19 @@ Date: 2025-10-10
 Author: AI Pair Programmer
 Change Summary:
 
--   Implemented custom HTML OverlayView markers with glow+pulse and hover legend to match dark theme, inspired by The Globe of Economic Complexity.
--   Replaced Google Maps Marker and InfoWindow usage for regular markers and KML-derived points with HTML overlays.
--   Injected one-time CSS for markers; added helper `createHtmlMarker`.
--   Cleaned unused imports/vars; preserved prop API (`onCCTVToggle`) for compatibility.
+-   Moved demo markers and heatmap to Nashik Gramin vicinity.
+-   Updated search descriptions to reference Nashik Gramin instead of San Francisco.
 
 Files Updated:
 
--   src/components/GoogleMap.tsx
-    -   Import cleanup: L5
-    -   API comment/no-op param usage: L63-L66, L92-L94
-    -   CSS injection for markers: L114-L133
-    -   Helper `createHtmlMarker`: L135-L197
-    -   Marker overlays effect (replaces Google Markers): L325-L383
-    -   KML marker overlays (replace Marker+InfoWindow): L564-L584
-    -   Removed unused `infoWindowRef` (no longer present)
+-   src/app/page.tsx
+    -   Demo marker coordinates updated: L78-L176 (multiple inner edits)
+    -   Heatmap sample points updated to Nashik: L178-L238 (replaced data block)
+    -   Searchable points description updated: L257
 
 Notes:
 
--   Marker color defaults to `#22d3ee`; group color can be set via `markerGroups[].color`.
--   Hover reveals a compact legend; click still calls `onPointClick`.
--   No changes to `legacy` dir or `node_modules`.
-
-Refs:
-
--   Aesthetic inspiration: http://globe.cid.harvard.edu/?mode=gridSphere&id=GE
+-   Map center already targets Nashik Gramin `center={{ lat: 20.0112771, lng: 74.00833808 }}`.
+-   No changes to legacy or node_modules.
 
 ---
