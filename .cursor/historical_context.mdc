@@ -206,3 +206,39 @@ Notes:
 -   Fixes CORS/streaming errors in browser.
 
 ---
+
+Date: 2025-10-10
+Author: AI Pair Programmer
+Change Summary:
+
+-   Removed all demo data (Parks, Bus Stations, Restaurants, Hotels markers).
+-   Removed demo heatmap data (sample population/activity density points).
+-   Removed demo-related state variables (`markersVisible`, `heatmapVisible`) and handler functions.
+-   Kept only real data sources: Dial 112 Calls and CCTV Cameras in marker groups.
+-   Moved Dial 112 toggles (Points + Heatmap) from bottom to main Map Layers section.
+-   Updated sidebar statistics to show Dial 112 and CCTV counts instead of sample points.
+
+Files Updated:
+
+-   src/app/page.tsx:
+    -   Removed state variables: L16-L20 (removed `markersVisible`, `heatmapVisible`)
+    -   Cleaned marker groups to only Dial 112 + CCTV: L183-L216 (removed Parks, Bus Stations, Restaurants, Hotels)
+    -   Removed demo heatmap data: L218 (removed entire `heatmapData` object)
+    -   Removed handler functions: L286-L293 (removed `handleMarkersToggle`, `handleHeatmapToggle`)
+    -   Updated sidebar layout: L351-L488
+        -   Removed "Points of Interest" toggle (was L507-L527)
+        -   Removed "Activity Heatmap" toggle (was L529-L549)
+        -   Moved Dial 112 Points toggle from bottom to main layers: L423-L444
+        -   Moved Dial 112 Heatmap toggle from bottom to main layers: L446-L466
+        -   Updated statistics section: L470-L484 (shows Dial 112 visible/total + CCTV count)
+    -   Updated GoogleMap heatmap prop: L499-L505 (uses only Dial 112 heatmap data, removed demo merge)
+    -   Removed unused props from GoogleMap: L511-L513 (removed `onMarkersToggle`, `onHeatmapToggle`)
+
+Notes:
+
+-   Layer panel now shows only production-ready features: KML, GeoJSON, CCTV, Dial 112 Points, Dial 112 Heatmap.
+-   Statistics display "Dial 112 Calls: X visible / Y total" and "CCTV Cameras: Z".
+-   Active layers count updated to reflect 5 total toggleable layers.
+-   No demo/sample data remains in the application.
+
+---

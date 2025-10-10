@@ -15,8 +15,6 @@ export default function Home() {
 	const [clickedPoint, setClickedPoint] = useState<{ lat: number; lng: number; title?: string; group?: string } | null>(null);
 	const [kmlLayerVisible, setKmlLayerVisible] = useState(false); // Start disabled by default
 	const [geoJsonLayerVisible, setGeoJsonLayerVisible] = useState(false);
-	const [markersVisible, setMarkersVisible] = useState(true); // Already enabled by default
-	const [heatmapVisible, setHeatmapVisible] = useState(true); // Already enabled by default
 	const [cctvLayerVisible, setCctvLayerVisible] = useState(false); // New CCTV layer toggle
 	const [dial112Visible, setDial112Visible] = useState(false); // Dial 112 points toggle
 	const [dial112HeatmapVisible, setDial112HeatmapVisible] = useState(false); // Dial 112 heatmap toggle
@@ -182,84 +180,8 @@ export default function Home() {
 		},
 	};
 
-	// Sample marker groups for different categories
+	// Marker groups - only real data sources
 	const markerGroups = [
-		{
-			name: "Parks",
-			color: "#22C55E", // Green
-			visible: markersVisible,
-			markers: [
-				{
-					position: { lat: 20.0113, lng: 74.0083 },
-					title: "Union Square",
-				},
-				{
-					position: { lat: 20.025, lng: 74.02 },
-					title: "Washington Square Park",
-				},
-				{
-					position: { lat: 19.995, lng: 73.99 },
-					title: "Golden Gate Park",
-				},
-			],
-		},
-		{
-			name: "Bus Stations",
-			color: "#3B82F6", // Blue
-			visible: markersVisible,
-			markers: [
-				{
-					position: { lat: 20.02, lng: 74.005 },
-					title: "Montgomery Station",
-				},
-				{
-					position: { lat: 19.985, lng: 74.015 },
-					title: "Powell Station",
-				},
-				{
-					position: { lat: 20.03, lng: 74.03 },
-					title: "Embarcadero Station",
-				},
-				{
-					position: { lat: 20.0, lng: 74.025 },
-					title: "Civic Center Station",
-				},
-			],
-		},
-		{
-			name: "Restaurants",
-			color: "#EF4444", // Red
-			visible: markersVisible,
-			markers: [
-				{
-					position: { lat: 20.04, lng: 74.05 },
-					title: "Tony's Little Star Pizza",
-				},
-				{
-					position: { lat: 20.015, lng: 74.035 },
-					title: "Fisherman's Wharf Seafood",
-				},
-				{
-					position: { lat: 19.98, lng: 74.02 },
-					title: "Chinatown Express",
-				},
-			],
-		},
-		{
-			name: "Hotels",
-			color: "#8B5CF6", // Purple
-			visible: markersVisible,
-			markers: [
-				{
-					position: { lat: 20.008, lng: 74.0 },
-					title: "The Ritz-Carlton",
-				},
-				{
-					position: { lat: 19.998, lng: 74.012 },
-					title: "Hotel Union Square",
-				},
-			],
-		},
 		{
 			name: "Dial 112 Calls",
 			color: "#EAB308", // Amber
@@ -292,43 +214,6 @@ export default function Home() {
 			})),
 		},
 	];
-
-	// Sample heatmap data - shifted to Nashik Gramin vicinity
-	const heatmapData = {
-		data: [
-			{ position: { lat: 20.0113, lng: 74.0083 }, weight: 95 },
-			{ position: { lat: 20.015, lng: 74.012 }, weight: 85 },
-			{ position: { lat: 20.02, lng: 74.02 }, weight: 80 },
-			{ position: { lat: 20.005, lng: 74.0 }, weight: 70 },
-			{ position: { lat: 19.995, lng: 73.995 }, weight: 65 },
-			{ position: { lat: 20.03, lng: 74.03 }, weight: 60 },
-			{ position: { lat: 19.985, lng: 74.015 }, weight: 55 },
-			{ position: { lat: 20.04, lng: 74.05 }, weight: 50 },
-			{ position: { lat: 20.025, lng: 74.02 }, weight: 75 },
-			{ position: { lat: 19.98, lng: 74.02 }, weight: 58 },
-		],
-		visible: heatmapVisible,
-		radius: 25,
-		opacity: 0.7,
-		maxIntensity: 100,
-		dissipating: true,
-		gradient: [
-			"rgba(0, 255, 255, 0)",
-			"rgba(0, 255, 255, 1)",
-			"rgba(0, 191, 255, 1)",
-			"rgba(0, 127, 255, 1)",
-			"rgba(0, 63, 255, 1)",
-			"rgba(0, 0, 255, 1)",
-			"rgba(0, 0, 223, 1)",
-			"rgba(0, 0, 191, 1)",
-			"rgba(0, 0, 159, 1)",
-			"rgba(0, 0, 127, 1)",
-			"rgba(63, 0, 91, 1)",
-			"rgba(127, 0, 63, 1)",
-			"rgba(191, 0, 31, 1)",
-			"rgba(255, 0, 0, 1)",
-		],
-	};
 
 	// Dial 112 heatmap data
 	const dial112HeatmapData = {
@@ -405,20 +290,6 @@ export default function Home() {
 		console.log("🔄 Page: GeoJSON config object:", geoJsonLayerConfig);
 		setGeoJsonLayerVisible(visible);
 		console.log("🔄 Page: GeoJSON toggle completed, new visible state should be:", visible);
-	};
-
-	// Handle Markers toggle
-	const handleMarkersToggle = (visible: boolean) => {
-		console.log("📍 Page: Markers toggle handler called with:", visible);
-		setMarkersVisible(visible);
-		console.log("📍 Page: Markers toggle completed, new visible state should be:", visible);
-	};
-
-	// Handle Heatmap toggle
-	const handleHeatmapToggle = (visible: boolean) => {
-		console.log("🔥 Page: Heatmap toggle handler called with:", visible);
-		setHeatmapVisible(visible);
-		console.log("🔥 Page: Heatmap toggle completed, new visible state should be:", visible);
 	};
 
 	// Handle CCTV toggle
@@ -504,50 +375,6 @@ export default function Home() {
 								/>
 							</div>
 
-							{/* Points/Markers Layer Toggle */}
-							<div className="flex items-center justify-between cursor-pointer group">
-								<div className="flex-1">
-									<div className="flex items-center space-x-2">
-										<span className="text-sm font-medium text-gray-200">📍 Points of Interest</span>
-										<span
-											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
-												markersVisible ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
-											}`}
-										>
-											{markersVisible ? "ON" : "OFF"}
-										</span>
-									</div>
-									<p className="text-xs text-gray-400 mt-0.5">Restaurants, parks, hotels & stations</p>
-								</div>
-								<Toggle
-									checked={markersVisible}
-									onCheckedChange={handleMarkersToggle}
-									variant="default"
-								/>
-							</div>
-
-							{/* Heatmap Layer Toggle */}
-							<div className="flex items-center justify-between cursor-pointer group">
-								<div className="flex-1">
-									<div className="flex items-center space-x-2">
-										<span className="text-sm font-medium text-gray-200">🔥 Activity Heatmap</span>
-										<span
-											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
-												heatmapVisible ? "bg-orange-500/20 text-orange-400 border border-orange-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
-											}`}
-										>
-											{heatmapVisible ? "ON" : "OFF"}
-										</span>
-									</div>
-									<p className="text-xs text-gray-400 mt-0.5">Population & activity density</p>
-								</div>
-								<Toggle
-									checked={heatmapVisible}
-									onCheckedChange={handleHeatmapToggle}
-									variant="warning"
-								/>
-							</div>
-
 							{/* GeoJSON Layer Toggle */}
 							<div className="flex items-center justify-between cursor-pointer group">
 								<div className="flex-1">
@@ -592,6 +419,51 @@ export default function Home() {
 									variant="warning"
 								/>
 							</div>
+
+							{/* Dial 112 Points Toggle */}
+							<div className="flex items-center justify-between cursor-pointer group">
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🚨 Dial 112 Points</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												dial112Visible ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{dial112Visible ? "ON" : "OFF"}
+										</span>
+										{dial112Loading && <div className="w-3 h-3 border border-amber-400 border-t-transparent rounded-full animate-spin"></div>}
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Viewport-filtered markers ({dial112Calls.length} visible)</p>
+								</div>
+								<Toggle
+									checked={dial112Visible}
+									onCheckedChange={setDial112Visible}
+									variant="warning"
+								/>
+							</div>
+
+							{/* Dial 112 Heatmap Toggle */}
+							<div className="flex items-center justify-between cursor-pointer group">
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🔥 Dial 112 Heatmap</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												dial112HeatmapVisible ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{dial112HeatmapVisible ? "ON" : "OFF"}
+										</span>
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Density visualization ({dial112AllCalls.length} total)</p>
+								</div>
+								<Toggle
+									checked={dial112HeatmapVisible}
+									onCheckedChange={setDial112HeatmapVisible}
+									variant="warning"
+								/>
+							</div>
 						</div>
 
 						{/* Layer Statistics */}
@@ -599,11 +471,13 @@ export default function Home() {
 							<div className="text-xs text-gray-500 space-y-1">
 								<div className="flex justify-between">
 									<span>Active Layers:</span>
-									<span className="font-medium">{[kmlLayerVisible, markersVisible, heatmapVisible, geoJsonLayerVisible, cctvLayerVisible].filter(Boolean).length}/5</span>
+									<span className="font-medium">{[kmlLayerVisible, geoJsonLayerVisible, cctvLayerVisible, dial112Visible, dial112HeatmapVisible].filter(Boolean).length}/5</span>
 								</div>
 								<div className="flex justify-between">
-									<span>Sample Points:</span>
-									<span className="font-medium">{markerGroups.filter((group) => group.name !== "CCTV Cameras").reduce((sum, group) => sum + group.markers.length, 0)}</span>
+									<span>Dial 112 Calls:</span>
+									<span className="font-medium text-amber-400">
+										{dial112Calls.length} visible / {dial112AllCalls.length} total
+									</span>
 								</div>
 								<div className="flex justify-between">
 									<span>CCTV Cameras:</span>
@@ -612,51 +486,6 @@ export default function Home() {
 							</div>
 						</div>
 					</div>
-				</div>
-
-				{/* Dial 112 Points Toggle */}
-				<div className="flex items-center justify-between cursor-pointer group">
-					<div className="flex-1">
-						<div className="flex items-center space-x-2">
-							<span className="text-sm font-medium text-gray-200">🚨 Dial 112 Points</span>
-							<span
-								className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
-									dial112Visible ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
-								}`}
-							>
-								{dial112Visible ? "ON" : "OFF"}
-							</span>
-							{dial112Loading && <div className="w-3 h-3 border border-amber-400 border-t-transparent rounded-full animate-spin"></div>}
-						</div>
-						<p className="text-xs text-gray-400 mt-0.5">Viewport-filtered markers ({dial112Calls.length} visible)</p>
-					</div>
-					<Toggle
-						checked={dial112Visible}
-						onCheckedChange={setDial112Visible}
-						variant="warning"
-					/>
-				</div>
-
-				{/* Dial 112 Heatmap Toggle */}
-				<div className="flex items-center justify-between cursor-pointer group">
-					<div className="flex-1">
-						<div className="flex items-center space-x-2">
-							<span className="text-sm font-medium text-gray-200">🔥 Dial 112 Heatmap</span>
-							<span
-								className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
-									dial112HeatmapVisible ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
-								}`}
-							>
-								{dial112HeatmapVisible ? "ON" : "OFF"}
-							</span>
-						</div>
-						<p className="text-xs text-gray-400 mt-0.5">Density visualization ({dial112AllCalls.length} total)</p>
-					</div>
-					<Toggle
-						checked={dial112HeatmapVisible}
-						onCheckedChange={setDial112HeatmapVisible}
-						variant="warning"
-					/>
 				</div>
 			</Sidebar>
 
@@ -670,10 +499,11 @@ export default function Home() {
 					className="w-full h-full"
 					markerGroups={markerGroups}
 					heatmap={{
-						data: [...(heatmapVisible ? heatmapData.data : []), ...(dial112HeatmapVisible ? dial112HeatmapData.data : [])],
-						visible: heatmapVisible || dial112HeatmapVisible,
-						radius: 22,
-						opacity: 0.65,
+						data: dial112HeatmapVisible ? dial112HeatmapData.data : [],
+						visible: dial112HeatmapVisible,
+						radius: 20,
+						opacity: 0.6,
+						gradient: dial112HeatmapData.gradient,
 					}}
 					kmlLayer={kmlLayerConfig}
 					geoJsonLayer={geoJsonLayerConfig}
@@ -682,8 +512,6 @@ export default function Home() {
 					searchablePoints={searchablePoints}
 					onKMLToggle={handleKMLToggle}
 					onGeoJSONToggle={handleGeoJSONToggle}
-					onMarkersToggle={handleMarkersToggle}
-					onHeatmapToggle={handleHeatmapToggle}
 					onCCTVToggle={handleCCTVToggle}
 					onBoundsChanged={setMapBounds}
 					showLayerControls={false}
