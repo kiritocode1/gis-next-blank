@@ -5,8 +5,8 @@ import Sidebar from "@/components/Sidebar";
 import { Toggle, GooeyFilter } from "@/components/LiquidToggle";
 import { AnimatePresence } from "framer-motion";
 import StreetViewPopup from "@/components/StreetViewPopup";
-import { useState, useEffect } from "react";
-import { fetchCCTVLocations, type CCTVLocation } from "@/services/externalApi";
+import { useState, useEffect, useRef } from "react";
+import { fetchCCTVLocations, type CCTVLocation, type Dial112Call, streamDial112Calls } from "@/services/externalApi";
 
 export default function Home() {
 	// State for selected point and search
@@ -18,10 +18,17 @@ export default function Home() {
 	const [markersVisible, setMarkersVisible] = useState(true); // Already enabled by default
 	const [heatmapVisible, setHeatmapVisible] = useState(true); // Already enabled by default
 	const [cctvLayerVisible, setCctvLayerVisible] = useState(false); // New CCTV layer toggle
+	const [dial112Visible, setDial112Visible] = useState(false); // Dial 112 points toggle
+	const [dial112HeatmapVisible, setDial112HeatmapVisible] = useState(false); // Dial 112 heatmap toggle
 
 	// External API data state
 	const [cctvLocations, setCctvLocations] = useState<CCTVLocation[]>([]);
 	const [cctvLoading, setCctvLoading] = useState(false);
+	const [dial112AllCalls, setDial112AllCalls] = useState<Dial112Call[]>([]); // All calls cached
+	const [dial112Calls, setDial112Calls] = useState<Dial112Call[]>([]); // Visible in viewport
+	const [dial112Loading, setDial112Loading] = useState(false);
+	const dial112LoadingRef = useRef(false); // Track if SSE is in progress
+	const [mapBounds, setMapBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
 
 	// State for absolute URLs (client-side only)
 	const [kmlAbsoluteUrl, setKmlAbsoluteUrl] = useState("/kml/nashik_gramin.kml");
@@ -53,6 +60,83 @@ export default function Home() {
 
 		loadCCTVData();
 	}, [cctvLayerVisible, cctvLocations.length, cctvLoading]);
+
+	// Load Dial 112 via SSE (cache all points, no rendering yet)
+	useEffect(() => {
+		let stop: (() => void) | null = null;
+		let buffer: Dial112Call[] = [];
+		let rafHandle: number | null = null;
+
+		const flushBuffer = () => {
+			if (buffer.length > 0) {
+				setDial112AllCalls((prev) => {
+					const updated = [...prev, ...buffer];
+					console.log(`🚨 Dial 112 cache updated: ${updated.length} total calls`);
+					return updated;
+				});
+				buffer = [];
+			}
+			rafHandle = null;
+		};
+
+		if ((dial112Visible || dial112HeatmapVisible) && !dial112LoadingRef.current) {
+			console.log("🚨 Starting Dial 112 SSE stream subscription...");
+			dial112LoadingRef.current = true;
+			setDial112Loading(true);
+			setDial112AllCalls([]);
+			stop = streamDial112Calls(
+				(row) => {
+					buffer.push(row);
+					// Batch every 100 rows for caching
+					if (buffer.length >= 100) {
+						if (rafHandle !== null) cancelAnimationFrame(rafHandle);
+						rafHandle = requestAnimationFrame(flushBuffer);
+					}
+				},
+				() => {
+					// Flush remaining on done
+					if (rafHandle !== null) cancelAnimationFrame(rafHandle);
+					flushBuffer();
+					console.log("✅ Dial 112 SSE stream complete");
+					setDial112Loading(false);
+					dial112LoadingRef.current = false;
+				},
+			);
+		}
+		return () => {
+			// Only cleanup animation frame, NOT the SSE connection
+			if (rafHandle !== null) cancelAnimationFrame(rafHandle);
+			// DON'T call stop() here - let the stream complete
+		};
+	}, [dial112Visible, dial112HeatmapVisible]);
+
+	// Filter Dial 112 by viewport bounds
+	useEffect(() => {
+		if (!dial112Visible) {
+			setDial112Calls([]);
+			return;
+		}
+
+		if (!mapBounds) {
+			console.log("⏳ Waiting for map bounds...");
+			return;
+		}
+
+		if (dial112AllCalls.length === 0) {
+			console.log("⏳ Waiting for Dial 112 data...");
+			return;
+		}
+
+		const { north, south, east, west } = mapBounds;
+		console.log(`🗺️ Map bounds:`, { north, south, east, west });
+
+		const filtered = dial112AllCalls.filter((call) => {
+			return call.latitude >= south && call.latitude <= north && call.longitude >= west && call.longitude <= east;
+		});
+
+		console.log(`📍 Dial 112: ${filtered.length}/${dial112AllCalls.length} in viewport`);
+		setDial112Calls(filtered);
+	}, [dial112Visible, mapBounds, dial112AllCalls]);
 
 	// KML Layer configuration
 	// Note: Google Maps KmlLayer requires absolute URLs, so we use window.location.origin
@@ -154,6 +238,16 @@ export default function Home() {
 				},
 			],
 		},
+		{
+			name: "Dial 112 Calls",
+			color: "#EAB308", // Amber
+			visible: dial112Visible,
+			markers: dial112Calls.map((c) => ({
+				position: { lat: c.latitude, lng: c.longitude },
+				title: c.eventId || c.policeStation || "Dial 112 Call",
+				label: "112",
+			})),
+		},
 		// Real CCTV data from external API
 		{
 			name: "CCTV Cameras",
@@ -211,6 +305,25 @@ export default function Home() {
 			"rgba(127, 0, 63, 1)",
 			"rgba(191, 0, 31, 1)",
 			"rgba(255, 0, 0, 1)",
+		],
+	};
+
+	// Dial 112 heatmap data
+	const dial112HeatmapData = {
+		data: dial112AllCalls.map((call) => ({
+			position: { lat: call.latitude, lng: call.longitude },
+			weight: 1,
+		})),
+		visible: dial112HeatmapVisible,
+		radius: 20,
+		opacity: 0.6,
+		gradient: [
+			"rgba(234, 179, 8, 0)", // amber transparent
+			"rgba(234, 179, 8, 0.4)",
+			"rgba(251, 191, 36, 0.6)",
+			"rgba(245, 158, 11, 0.8)",
+			"rgba(217, 119, 6, 1)",
+			"rgba(180, 83, 9, 1)",
 		],
 	};
 
@@ -478,6 +591,51 @@ export default function Home() {
 						</div>
 					</div>
 				</div>
+
+				{/* Dial 112 Points Toggle */}
+				<div className="flex items-center justify-between cursor-pointer group">
+					<div className="flex-1">
+						<div className="flex items-center space-x-2">
+							<span className="text-sm font-medium text-gray-200">🚨 Dial 112 Points</span>
+							<span
+								className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+									dial112Visible ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+								}`}
+							>
+								{dial112Visible ? "ON" : "OFF"}
+							</span>
+							{dial112Loading && <div className="w-3 h-3 border border-amber-400 border-t-transparent rounded-full animate-spin"></div>}
+						</div>
+						<p className="text-xs text-gray-400 mt-0.5">Viewport-filtered markers ({dial112Calls.length} visible)</p>
+					</div>
+					<Toggle
+						checked={dial112Visible}
+						onCheckedChange={setDial112Visible}
+						variant="warning"
+					/>
+				</div>
+
+				{/* Dial 112 Heatmap Toggle */}
+				<div className="flex items-center justify-between cursor-pointer group">
+					<div className="flex-1">
+						<div className="flex items-center space-x-2">
+							<span className="text-sm font-medium text-gray-200">🔥 Dial 112 Heatmap</span>
+							<span
+								className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+									dial112HeatmapVisible ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+								}`}
+							>
+								{dial112HeatmapVisible ? "ON" : "OFF"}
+							</span>
+						</div>
+						<p className="text-xs text-gray-400 mt-0.5">Density visualization ({dial112AllCalls.length} total)</p>
+					</div>
+					<Toggle
+						checked={dial112HeatmapVisible}
+						onCheckedChange={setDial112HeatmapVisible}
+						variant="warning"
+					/>
+				</div>
 			</Sidebar>
 
 			{/* Full-screen map positioned behind sidebar and header */}
@@ -489,7 +647,12 @@ export default function Home() {
 					width="100vw"
 					className="w-full h-full"
 					markerGroups={markerGroups}
-					heatmap={heatmapData}
+					heatmap={{
+						data: [...(heatmapVisible ? heatmapData.data : []), ...(dial112HeatmapVisible ? dial112HeatmapData.data : [])],
+						visible: heatmapVisible || dial112HeatmapVisible,
+						radius: 22,
+						opacity: 0.65,
+					}}
 					kmlLayer={kmlLayerConfig}
 					geoJsonLayer={geoJsonLayerConfig}
 					selectedPoint={selectedPoint}
@@ -500,6 +663,7 @@ export default function Home() {
 					onMarkersToggle={handleMarkersToggle}
 					onHeatmapToggle={handleHeatmapToggle}
 					onCCTVToggle={handleCCTVToggle}
+					onBoundsChanged={setMapBounds}
 					showLayerControls={false}
 				/>
 

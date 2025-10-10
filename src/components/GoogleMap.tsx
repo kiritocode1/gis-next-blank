@@ -62,6 +62,7 @@ interface GoogleMapProps {
 	onHeatmapToggle?: (visible: boolean) => void;
 	// onCCTVToggle is reserved for future use to avoid breaking API
 	onCCTVToggle?: (visible: boolean) => void;
+	onBoundsChanged?: (bounds: { north: number; south: number; east: number; west: number }) => void;
 	showLayerControls?: boolean;
 }
 
@@ -91,6 +92,7 @@ export default function GoogleMap({
 	onHeatmapToggle,
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	onCCTVToggle,
+	onBoundsChanged,
 	showLayerControls = false,
 }: GoogleMapProps): JSX.Element {
 	const mapRef = useRef<HTMLDivElement>(null);
@@ -790,6 +792,32 @@ export default function GoogleMap({
 			mapInstanceRef.current.setZoom(targetZoom);
 		}
 	}, [selectedPoint]);
+
+	// Listen to map bounds changes (idle event for performance)
+	useEffect(() => {
+		if (!mapInstanceRef.current || !isLoaded || !onBoundsChanged) return;
+
+		const listener = mapInstanceRef.current.addListener("idle", () => {
+			if (!mapInstanceRef.current) return;
+			const bounds = mapInstanceRef.current.getBounds();
+			if (bounds) {
+				const ne = bounds.getNorthEast();
+				const sw = bounds.getSouthWest();
+				onBoundsChanged({
+					north: ne.lat(),
+					south: sw.lat(),
+					east: ne.lng(),
+					west: sw.lng(),
+				});
+			}
+		});
+
+		return () => {
+			if (listener && window.google?.maps?.event) {
+				window.google.maps.event.removeListener(listener);
+			}
+		};
+	}, [isLoaded, onBoundsChanged]);
 
 	// Sync internal state with props
 	useEffect(() => {

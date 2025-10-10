@@ -80,6 +80,51 @@ export interface ATMResponse {
 	data: ATMLocation[];
 }
 
+// Dial 112
+export interface Dial112Call {
+	id: string;
+	eventId: string;
+	policeStation: string;
+	callType: string;
+	latitude: number;
+	longitude: number;
+	receivedAt: string;
+}
+
+export interface Dial112Response {
+	success: boolean;
+	data: Dial112Call[];
+}
+
+export type Dial112SSEHandler = (row: Dial112Call) => void;
+export type Dial112SSEDone = () => void;
+
+export function streamDial112Calls(onRow: Dial112SSEHandler, onDone?: Dial112SSEDone): () => void {
+	const es = new EventSource("/api/dial112/stream");
+	const rowListener = (ev: MessageEvent<string>) => {
+		try {
+			const row: Dial112Call = JSON.parse(ev.data as string);
+			onRow(row);
+		} catch {
+			// ignore malformed rows
+		}
+	};
+	const doneListener = () => {
+		onDone?.();
+		es.close();
+	};
+	es.addEventListener("row", rowListener as unknown as EventListener);
+	es.addEventListener("done", doneListener as unknown as EventListener);
+	es.onerror = () => {
+		es.close();
+	};
+	return () => {
+		es.removeEventListener("row", rowListener as unknown as EventListener);
+		es.removeEventListener("done", doneListener as unknown as EventListener);
+		es.close();
+	};
+}
+
 /**
  * Fetch CCTV locations from the external API
  */
@@ -277,5 +322,24 @@ export async function fetchATMLocations(): Promise<ATMLocation[]> {
 	} catch (error) {
 		console.error("❌ Error fetching ATM locations:", error);
 		throw error;
+	}
+}
+
+/**
+ * Fetch Dial 112 calls parsed from local CSV (API route)
+ */
+export async function fetchDial112Calls(): Promise<Dial112Call[]> {
+	try {
+		console.log("🚨 Fetching Dial 112 calls (CSV via API route)...");
+		const response = await fetch("/api/dial112", { cache: "no-store" });
+		if (!response.ok) throw new Error(`HTTP ${response.status}`);
+		const json: Dial112Response = await response.json();
+		if (!json.success) throw new Error("Dial112 API returned success=false");
+		const calls = json.data.filter((c) => Number.isFinite(c.latitude) && Number.isFinite(c.longitude));
+		console.log(`✅ Loaded ${calls.length} Dial 112 calls`);
+		return calls;
+	} catch (error) {
+		console.error("❌ Error fetching Dial 112 calls:", error);
+		return [];
 	}
 }
