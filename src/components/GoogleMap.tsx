@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type JSX } from "react";
-import { parseKMLFile, type KMLFeature, type KMLMarker } from "@/utils/kmlParser";
+import { parseKMLFile } from "@/utils/kmlParser";
 import { Toggle, GooeyFilter } from "./LiquidToggle";
 
 interface GoogleMapProps {
@@ -60,6 +60,7 @@ interface GoogleMapProps {
 	onGeoJSONToggle?: (visible: boolean) => void;
 	onMarkersToggle?: (visible: boolean) => void;
 	onHeatmapToggle?: (visible: boolean) => void;
+	// onCCTVToggle is reserved for future use to avoid breaking API
 	onCCTVToggle?: (visible: boolean) => void;
 	showLayerControls?: boolean;
 }
@@ -88,6 +89,7 @@ export default function GoogleMap({
 	onGeoJSONToggle,
 	onMarkersToggle,
 	onHeatmapToggle,
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	onCCTVToggle,
 	showLayerControls = false,
 }: GoogleMapProps): JSX.Element {
@@ -104,11 +106,95 @@ export default function GoogleMap({
 	const kmlAbortControllerRef = useRef<AbortController | null>(null);
 	const geoJsonAbortControllerRef = useRef<AbortController | null>(null);
 	const geoJsonFeaturesRef = useRef<any[]>([]);
-	const infoWindowRef = useRef<any>(null);
 	const [kmlVisible, setKmlVisible] = useState(kmlLayer?.visible ?? false);
 	const [geoJsonVisible, setGeoJsonVisible] = useState(geoJsonLayer?.visible ?? false);
 	const [markersVisible, setMarkersVisible] = useState(true);
 	const [heatmapVisible, setHeatmapVisible] = useState(true);
+
+	// Inject CSS for custom markers once
+	useEffect(() => {
+		if (typeof document === "undefined") return;
+		const styleId = "gis-custom-marker-styles";
+		if (!document.getElementById(styleId)) {
+			const style = document.createElement("style");
+			style.id = styleId;
+			style.textContent = `
+				.gis-marker { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; }
+				.gis-marker-dot { width: 12px; height: 12px; border-radius: 9999px; background: var(--marker-color, #22d3ee); box-shadow: 0 0 12px 4px color-mix(in srgb, var(--marker-color, #22d3ee) 60%, transparent), 0 0 2px 1px rgba(0,0,0,0.6) inset; }
+				.gis-marker-pulse { position: absolute; top: 50%; left: 50%; width: 12px; height: 12px; border-radius: 9999px; transform: translate(-50%, -50%); background: var(--marker-color, #22d3ee); opacity: 0.6; filter: blur(2px); animation: gisPulse 2.2s ease-out infinite; }
+				@keyframes gisPulse { 0% { transform: translate(-50%, -50%) scale(1); opacity: 0.65; } 70% { transform: translate(-50%, -50%) scale(2.1); opacity: 0.08; } 100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; } }
+				.gis-legend { position: absolute; top: -12px; left: 14px; transform: translateY(-100%); background: #0b1220; color: #e5e7eb; border: 1px solid #1f2937; border-radius: 8px; padding: 8px 10px; white-space: nowrap; font-size: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.35); opacity: 0; pointer-events: none; transition: opacity .15s ease, transform .15s ease; }
+				.gis-legend-header { font-weight: 600; margin-bottom: 2px; color: #cfe9ff; }
+				.gis-legend-subtle { color: #93a4b5; font-size: 11px; }
+				.gis-marker:hover .gis-legend { opacity: 1; transform: translateY(calc(-100% - 2px)); }
+			`;
+			document.head.appendChild(style);
+		}
+	}, []);
+
+	// Helper to create a custom HTML marker using OverlayView
+	const createHtmlMarker = (
+		position: { lat: number; lng: number },
+		options: {
+			title?: string;
+			label?: string;
+			color?: string;
+			groupName?: string;
+			onClick?: () => void;
+		},
+	): any => {
+		const overlay = new window.google.maps.OverlayView();
+		const container = document.createElement("div");
+		container.className = "gis-marker";
+		container.style.setProperty("--marker-color", options.color || "#22d3ee");
+		container.setAttribute("aria-label", options.title || options.label || "Marker");
+
+		const pulse = document.createElement("div");
+		pulse.className = "gis-marker-pulse";
+		const dot = document.createElement("div");
+		dot.className = "gis-marker-dot";
+
+		const legend = document.createElement("div");
+		legend.className = "gis-legend";
+		legend.innerHTML = `
+			<div class="gis-legend-header">${(options.title || options.label || "Point").replace(/'/g, "&apos;")}</div>
+			<div class="gis-legend-subtle">${(options.groupName || "Marker").replace(/'/g, "&apos;")}</div>
+		`;
+
+		container.appendChild(pulse);
+		container.appendChild(dot);
+		container.appendChild(legend);
+
+		if (options.onClick) {
+			container.addEventListener("click", (e) => {
+				e.stopPropagation();
+				options.onClick?.();
+			});
+		}
+
+		overlay.onAdd = function onAdd() {
+			const panes = this.getPanes();
+			panes.overlayMouseTarget.appendChild(container);
+		};
+
+		overlay.draw = function draw() {
+			const projection = this.getProjection();
+			if (!projection) return;
+			const latLng = new window.google.maps.LatLng(position.lat, position.lng);
+			const point = projection.fromLatLngToDivPixel(latLng);
+			if (point) {
+				container.style.left = `${point.x}px`;
+				container.style.top = `${point.y}px`;
+			}
+		};
+
+		overlay.onRemove = function onRemove() {
+			if (container.parentNode) container.parentNode.removeChild(container);
+		};
+
+		overlay.setMap(mapInstanceRef.current);
+		return overlay;
+	};
 
 	// Load Google Maps script
 	useEffect(() => {
@@ -236,7 +322,7 @@ export default function GoogleMap({
 		}
 	}, [isLoaded, center, zoom]);
 
-	// Handle markers
+	// Handle markers (custom HTML overlays)
 	useEffect(() => {
 		if (mapInstanceRef.current && isLoaded) {
 			// Clear existing markers
@@ -247,36 +333,54 @@ export default function GoogleMap({
 			});
 			groupMarkersRef.current.clear();
 
-			// Add individual markers
+			// Add individual markers as HTML overlays
 			markers.forEach((markerData) => {
-				const marker = new window.google.maps.Marker({
-					position: markerData.position,
-					map: mapInstanceRef.current,
-					title: markerData.title || "Marker",
-					animation: window.google.maps.Animation.DROP,
+				const overlay = createHtmlMarker(markerData.position, {
+					title: markerData.title || markerData.label || "Marker",
+					groupName: "Markers",
+					color: undefined,
+					onClick: () => {
+						if (onPointClick) {
+							onPointClick({
+								lat: markerData.position.lat,
+								lng: markerData.position.lng,
+								title: markerData.title || markerData.label,
+								group: "Markers",
+							});
+						}
+					},
 				});
-				markersRef.current.push(marker);
+				markersRef.current.push(overlay);
 			});
 
-			// Add grouped markers
+			// Add grouped markers as HTML overlays
 			markerGroups.forEach((group) => {
 				const shouldShowGroup = group.visible !== false && markersVisible;
 				if (shouldShowGroup) {
 					const groupMarkers: any[] = [];
 					group.markers.forEach((markerData) => {
-						const marker = new window.google.maps.Marker({
-							position: markerData.position,
-							map: mapInstanceRef.current,
-							title: markerData.title || group.name,
-							animation: window.google.maps.Animation.DROP,
+						const overlay = createHtmlMarker(markerData.position, {
+							title: markerData.title || markerData.label || group.name,
+							groupName: group.name,
+							color: group.color,
+							onClick: () => {
+								if (onPointClick) {
+									onPointClick({
+										lat: markerData.position.lat,
+										lng: markerData.position.lng,
+										title: markerData.title || markerData.label || group.name,
+										group: group.name,
+									});
+								}
+							},
 						});
-						groupMarkers.push(marker);
+						groupMarkers.push(overlay);
 					});
 					groupMarkersRef.current.set(group.name, groupMarkers);
 				}
 			});
 		}
-	}, [markers, markerGroups, markersVisible, isLoaded]);
+	}, [markers, markerGroups, markersVisible, isLoaded, onPointClick]);
 
 	// Handle heatmap
 	useEffect(() => {
@@ -457,68 +561,26 @@ export default function GoogleMap({
 						}
 					});
 
-					// Render police station markers
+					// Render police station markers as overlays with hover legends
 					result.markers.forEach((markerData) => {
-						const marker = new window.google.maps.Marker({
-							position: markerData.position,
-							map: mapInstanceRef.current,
-							title: markerData.title,
-							icon: {
-								url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-									<svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
-										<path d="M16 0C7.2 0 0 7.2 0 16c0 8.8 16 24 16 24s16-15.2 16-24C32 7.2 24.8 0 16 0z" fill="#1E40AF" stroke="#FFFFFF" stroke-width="2"/>
-										<circle cx="16" cy="16" r="8" fill="#FFFFFF"/>
-										<text x="16" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#1E40AF">PS</text>
-									</svg>
-								`)}`,
-								scaledSize: new window.google.maps.Size(32, 40),
-								anchor: new window.google.maps.Point(16, 40),
+						const title = markerData.title || "Police Station";
+						const overlay = createHtmlMarker(markerData.position, {
+							title,
+							label: "PS",
+							groupName: "Police Stations",
+							color: "#60a5fa",
+							onClick: () => {
+								if (onPointClick) {
+									onPointClick({
+										lat: markerData.position.lat,
+										lng: markerData.position.lng,
+										title,
+										group: "Police Stations",
+									});
+								}
 							},
-							animation: window.google.maps.Animation.DROP,
 						});
-
-						marker.addListener("click", () => {
-							if (infoWindowRef.current) {
-								infoWindowRef.current.close();
-							}
-
-							const props = markerData.properties;
-							const content = `
-								<div style="padding: 12px; max-width: 320px; font-family: Arial, sans-serif;">
-									<h3 style="margin: 0 0 8px 0; color: #1E40AF; font-size: 16px;">${markerData.title}</h3>
-									<div style="margin-bottom: 8px;">
-										<span style="background: #1E40AF; color: white; padding: 2px 6px; border-radius: 8px; font-size: 11px; font-weight: 500;">Police Station</span>
-									</div>
-									${props.division ? `<p style="margin: 4px 0;"><strong>Division:</strong> ${props.division}</p>` : ""}
-									${props.ps_name_ma ? `<p style="margin: 4px 0;"><strong>Marathi Name:</strong> ${props.ps_name_ma}</p>` : ""}
-									${props.address ? `<p style="margin: 4px 0;"><strong>Address:</strong> ${props.address}</p>` : ""}
-									${props.mobile_no ? `<p style="margin: 4px 0;"><strong>Mobile:</strong> ${props.mobile_no}</p>` : ""}
-									${props.email_id ? `<p style="margin: 4px 0;"><strong>Email:</strong> ${props.email_id}</p>` : ""}
-									<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
-										<strong>Coordinates:</strong> ${markerData.position.lat.toFixed(4)}, ${markerData.position.lng.toFixed(4)}
-									</div>
-								</div>
-							`;
-
-							const infoWindow = new window.google.maps.InfoWindow({
-								content,
-								maxWidth: 350,
-							});
-
-							infoWindow.open(mapInstanceRef.current, marker);
-							infoWindowRef.current = infoWindow;
-
-							if (onPointClick) {
-								onPointClick({
-									lat: markerData.position.lat,
-									lng: markerData.position.lng,
-									title: markerData.title,
-									group: "Police Stations",
-								});
-							}
-						});
-
-						kmlMarkersRef.current.push(marker);
+						kmlMarkersRef.current.push(overlay);
 					});
 
 					console.log("✅ KML rendering completed successfully");
