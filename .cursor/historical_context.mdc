@@ -24,3 +24,44 @@ Notes:
 -   No changes to legacy or node_modules.
 
 ---
+
+---
+
+Date: 2025-10-10
+Author: AI Pair Programmer
+Change Summary:
+
+-   Added `StreetViewPopup` with Framer Motion animations and Google Street View integration.
+-   Wired popup to marker clicks via `clickedPoint` in `src/app/page.tsx`; placed top-right with dark theme styling.
+
+Files Updated:
+
+-   src/components/StreetViewPopup.tsx (new)
+-   src/app/page.tsx
+    -   Imports `AnimatePresence` and `StreetViewPopup`: near top
+    -   Renders popup when `clickedPoint` set: within fixed top-right container below `GoogleMap`
+
+Notes:
+
+-   Requires `framer-motion` dependency. Install before running.
+-   Uses existing Google Maps script loaded by `GoogleMap.tsx`.
+
+---
+
+---
+
+Date: 2025-10-10
+Author: AI Pair Programmer
+Change Summary:
+
+-   Street View: compute POV heading from pano to clicked lat/lng; increase search radius.
+-   Animate-on-click: key StreetViewPopup by lat,lng to retrigger Framer Motion.
+
+Files Updated:
+
+-   src/components/StreetViewPopup.tsx
+    -   Heading calculation + POV set; radius 120; within useEffect.
+-   src/app/page.tsx
+    -   Keyed <StreetViewPopup> using coordinates for animation resets.
+
+---

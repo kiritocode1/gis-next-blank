@@ -3,6 +3,8 @@
 import GoogleMap from "@/components/GoogleMap";
 import Sidebar from "@/components/Sidebar";
 import { Toggle, GooeyFilter } from "@/components/LiquidToggle";
+import { AnimatePresence } from "framer-motion";
+import StreetViewPopup from "@/components/StreetViewPopup";
 import { useState, useEffect } from "react";
 import { fetchCCTVLocations, type CCTVLocation } from "@/services/externalApi";
 
@@ -500,6 +502,21 @@ export default function Home() {
 					onCCTVToggle={handleCCTVToggle}
 					showLayerControls={false}
 				/>
+
+				{/* Street View popup container (top-right) */}
+				<div className="pointer-events-none fixed top-20 right-4 z-[60]">
+					<AnimatePresence>
+						{clickedPoint && (
+							<div className="pointer-events-auto">
+								<StreetViewPopup
+									key={`${clickedPoint.lat.toFixed(6)}_${clickedPoint.lng.toFixed(6)}`}
+									point={clickedPoint}
+									onClose={() => setClickedPoint(null)}
+								/>
+							</div>
+						)}
+					</AnimatePresence>
+				</div>
 			</div>
 
 			{/* Add the GooeyFilter for the liquid toggle effects */}
