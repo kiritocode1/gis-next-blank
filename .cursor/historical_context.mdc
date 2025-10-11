@@ -242,3 +242,58 @@ Notes:
 -   No demo/sample data remains in the application.
 
 ---
+
+Date: 2025-01-27
+Author: AI Pair Programmer
+Change Summary:
+
+-   Converted HTML table format in `accident_data.csv` to proper CSV format.
+-   Created Python script using BeautifulSoup4 to parse HTML table structure.
+-   Extracted 8 columns: Sr_No, State, District, Latitude, Longitude, Grid_ID, Accident_Count, All_India_Rank.
+-   Generated cleaned CSV with 501 data rows + header.
+
+Files Updated:
+
+-   emergency-data/accident_data_cleaned.csv (new): Clean CSV with proper headers and 501 accident records
+-   convert_html_to_csv.py (temporary, deleted): Python script for HTML to CSV conversion
+
+Notes:
+
+-   Original file contained HTML table markup instead of CSV format.
+-   Data includes accident locations in Nashik district with coordinates and rankings.
+-   All HTML tags and styling removed, data properly formatted as CSV.
+
+---
+
+Date: 2025-01-27
+Author: AI Pair Programmer
+Change Summary:
+
+-   Added accident data toggles (points + heatmap) following Dial112 pattern.
+-   Created SSE streaming API for accident_data.csv with proper CSV parsing.
+-   Added red-themed accident markers and heatmap visualization.
+-   Implemented viewport filtering and zoom-based decimation for performance.
+
+Files Updated:
+
+-   src/app/api/accidents/stream/route.ts (new): SSE endpoint parsing accident_data.csv
+-   src/services/externalApi.ts: Added AccidentRecord interface and streamAccidentData function
+-   src/app/page.tsx:
+    -   Added state: accidentVisible, accidentHeatmapVisible, accidentAllRecords, accidentRecords, accidentLoading
+    -   Added SSE effect for accident data (100 row batches, cache all)
+    -   Added viewport filter effect with same zoom decimation as Dial112
+    -   Added accident marker group (red #EF4444, label "🚗")
+    -   Added accident heatmap data (red gradient)
+    -   Added two toggles below Dial112: Accident Points + Accident Heatmap
+    -   Updated statistics to show accident counts and active layers (7 total)
+    -   Merged accident heatmap with dial112 heatmap in GoogleMap
+
+Notes:
+
+-   CSV has duplicate headers (lines 1 & 2) - skips line 2 automatically.
+-   Uses red color scheme (#EF4444) for accident data.
+-   Same decimation strategy as Dial112: zoom <10: 1/50, 10-11: 1/20, 12-13: 1/10, 14-15: 1/5, ≥16: all.
+-   Heatmap weight based on accident count from CSV.
+-   Positioned toggles below Dial112 toggles in sidebar.
+
+---

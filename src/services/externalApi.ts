@@ -99,11 +99,53 @@ export interface Dial112Response {
 export type Dial112SSEHandler = (row: Dial112Call) => void;
 export type Dial112SSEDone = () => void;
 
+// Accident Data
+export interface AccidentRecord {
+	srNo: string;
+	state: string;
+	district: string;
+	latitude: number;
+	longitude: number;
+	gridId: string;
+	accidentCount: number;
+	allIndiaRank: number;
+	ambulance: string;
+}
+
+export type AccidentSSEHandler = (row: AccidentRecord) => void;
+export type AccidentSSEDone = () => void;
+
 export function streamDial112Calls(onRow: Dial112SSEHandler, onDone?: Dial112SSEDone): () => void {
 	const es = new EventSource("/api/dial112/stream");
 	const rowListener = (ev: MessageEvent<string>) => {
 		try {
 			const row: Dial112Call = JSON.parse(ev.data as string);
+			onRow(row);
+		} catch {
+			// ignore malformed rows
+		}
+	};
+	const doneListener = () => {
+		onDone?.();
+		es.close();
+	};
+	es.addEventListener("row", rowListener as unknown as EventListener);
+	es.addEventListener("done", doneListener as unknown as EventListener);
+	es.onerror = () => {
+		es.close();
+	};
+	return () => {
+		es.removeEventListener("row", rowListener as unknown as EventListener);
+		es.removeEventListener("done", doneListener as unknown as EventListener);
+		es.close();
+	};
+}
+
+export function streamAccidentData(onRow: AccidentSSEHandler, onDone?: AccidentSSEDone): () => void {
+	const es = new EventSource("/api/accidents/stream");
+	const rowListener = (ev: MessageEvent<string>) => {
+		try {
+			const row: AccidentRecord = JSON.parse(ev.data as string);
 			onRow(row);
 		} catch {
 			// ignore malformed rows

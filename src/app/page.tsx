@@ -6,7 +6,7 @@ import { Toggle, GooeyFilter } from "@/components/LiquidToggle";
 import { AnimatePresence } from "framer-motion";
 import StreetViewPopup from "@/components/StreetViewPopup";
 import { useState, useEffect, useRef } from "react";
-import { fetchCCTVLocations, type CCTVLocation, type Dial112Call, streamDial112Calls } from "@/services/externalApi";
+import { fetchCCTVLocations, type CCTVLocation, type Dial112Call, streamDial112Calls, type AccidentRecord, streamAccidentData } from "@/services/externalApi";
 
 export default function Home() {
 	// State for selected point and search
@@ -18,6 +18,8 @@ export default function Home() {
 	const [cctvLayerVisible, setCctvLayerVisible] = useState(false); // New CCTV layer toggle
 	const [dial112Visible, setDial112Visible] = useState(false); // Dial 112 points toggle
 	const [dial112HeatmapVisible, setDial112HeatmapVisible] = useState(false); // Dial 112 heatmap toggle
+	const [accidentVisible, setAccidentVisible] = useState(false); // Accident points toggle
+	const [accidentHeatmapVisible, setAccidentHeatmapVisible] = useState(false); // Accident heatmap toggle
 
 	// External API data state
 	const [cctvLocations, setCctvLocations] = useState<CCTVLocation[]>([]);
@@ -26,6 +28,10 @@ export default function Home() {
 	const [dial112Calls, setDial112Calls] = useState<Dial112Call[]>([]); // Visible in viewport
 	const [dial112Loading, setDial112Loading] = useState(false);
 	const dial112LoadingRef = useRef(false); // Track if SSE is in progress
+	const [accidentAllRecords, setAccidentAllRecords] = useState<AccidentRecord[]>([]); // All records cached
+	const [accidentRecords, setAccidentRecords] = useState<AccidentRecord[]>([]); // Visible in viewport
+	const [accidentLoading, setAccidentLoading] = useState(false);
+	const accidentLoadingRef = useRef(false); // Track if SSE is in progress
 	const [mapBounds, setMapBounds] = useState<{
 		north: number;
 		south: number;
@@ -113,6 +119,56 @@ export default function Home() {
 		};
 	}, [dial112Visible, dial112HeatmapVisible]);
 
+	// Load Accident data via SSE (cache all points, no rendering yet)
+	useEffect(() => {
+		let buffer: AccidentRecord[] = [];
+		let rafHandle: number | null = null;
+		let accumulatedRecords: AccidentRecord[] = [];
+
+		const flushBuffer = () => {
+			if (buffer.length > 0) {
+				console.log(`🚗 Flushing ${buffer.length} records to cache`);
+				accumulatedRecords = [...accumulatedRecords, ...buffer];
+				setAccidentAllRecords([...accumulatedRecords]);
+				console.log(`🚗 Accident cache updated: ${accumulatedRecords.length} total records`);
+				buffer = [];
+			}
+			rafHandle = null;
+		};
+
+		if ((accidentVisible || accidentHeatmapVisible) && !accidentLoadingRef.current) {
+			console.log("🚗 Starting Accident Data SSE stream subscription...");
+			accidentLoadingRef.current = true;
+			setAccidentLoading(true);
+			accumulatedRecords = [];
+			setAccidentAllRecords([]);
+			streamAccidentData(
+				(row) => {
+					console.log("🚗 Received accident row:", row);
+					buffer.push(row);
+					// Batch every 50 rows for caching (smaller batches for faster updates)
+					if (buffer.length >= 50) {
+						if (rafHandle !== null) cancelAnimationFrame(rafHandle);
+						rafHandle = requestAnimationFrame(flushBuffer);
+					}
+				},
+				() => {
+					// Flush remaining on done
+					if (rafHandle !== null) cancelAnimationFrame(rafHandle);
+					flushBuffer();
+					console.log("✅ Accident Data SSE stream complete");
+					setAccidentLoading(false);
+					accidentLoadingRef.current = false;
+				},
+			);
+		}
+		return () => {
+			// Only cleanup animation frame, NOT the SSE connection
+			if (rafHandle !== null) cancelAnimationFrame(rafHandle);
+			// Let the SSE stream complete naturally
+		};
+	}, [accidentVisible, accidentHeatmapVisible]);
+
 	// Filter Dial 112 by viewport bounds AND zoom level (decimation)
 	useEffect(() => {
 		if (!dial112Visible) {
@@ -157,6 +213,54 @@ export default function Home() {
 		console.log(`📍 Dial 112: ${filtered.length}/${dial112AllCalls.length} in viewport (zoom ${zoom}, skip factor ${skipFactor})`);
 		setDial112Calls(filtered);
 	}, [dial112Visible, mapBounds, dial112AllCalls]);
+
+	// Filter Accident by viewport bounds AND zoom level (decimation)
+	useEffect(() => {
+		if (!accidentVisible) {
+			setAccidentRecords([]);
+			return;
+		}
+
+		if (!mapBounds) {
+			console.log("⏳ Waiting for map bounds...");
+			return;
+		}
+
+		if (accidentAllRecords.length === 0) {
+			console.log("⏳ Waiting for Accident data...");
+			return;
+		}
+
+		console.log(`🚗 Processing ${accidentAllRecords.length} accident records for viewport filtering`);
+		console.log(`🚗 First few records:`, accidentAllRecords.slice(0, 3));
+
+		const { north, south, east, west, zoom } = mapBounds;
+		console.log(`🗺️ Map bounds (zoom ${zoom}):`, { north, south, east, west });
+
+		// Zoom-based decimation strategy:
+		// zoom < 10: Show 1 in 50 points (very zoomed out - state/country level)
+		// zoom 10-11: Show 1 in 20 points (city level)
+		// zoom 12-13: Show 1 in 10 points (district level)
+		// zoom 14-15: Show 1 in 5 points (neighborhood level)
+		// zoom >= 16: Show all points (street level)
+		let skipFactor = 1;
+		if (zoom < 10) skipFactor = 50;
+		else if (zoom < 12) skipFactor = 20;
+		else if (zoom < 14) skipFactor = 10;
+		else if (zoom < 16) skipFactor = 5;
+
+		const filtered = accidentAllRecords.filter((record, index) => {
+			// First check if in viewport
+			const inViewport = record.latitude >= south && record.latitude <= north && record.longitude >= west && record.longitude <= east;
+			if (!inViewport) return false;
+
+			// Then apply decimation based on zoom
+			return index % skipFactor === 0;
+		});
+
+		console.log(`📍 Accident: ${filtered.length}/${accidentAllRecords.length} in viewport (zoom ${zoom}, skip factor ${skipFactor})`);
+		setAccidentRecords(filtered);
+	}, [accidentVisible, mapBounds, accidentAllRecords]);
 
 	// KML Layer configuration
 	// Note: Google Maps KmlLayer requires absolute URLs, so we use window.location.origin
@@ -213,6 +317,31 @@ export default function Home() {
 				},
 			})),
 		},
+		// Accident data from CSV
+		{
+			name: "Accident Records",
+			color: "#EF4444", // Red
+			visible: accidentVisible,
+			markers: (() => {
+				console.log(`🚗 Creating ${accidentRecords.length} accident markers`);
+				return accidentRecords.map((accident) => {
+					console.log("🚗 Creating accident marker:", accident);
+					return {
+						position: { lat: accident.latitude, lng: accident.longitude },
+						title: `Accident ${accident.srNo} - ${accident.accidentCount} accidents`,
+						label: "🚗",
+						extraData: {
+							state: accident.state,
+							district: accident.district,
+							accidentCount: accident.accidentCount,
+							allIndiaRank: accident.allIndiaRank,
+							gridId: accident.gridId,
+							ambulance: accident.ambulance,
+						},
+					};
+				});
+			})(),
+		},
 	];
 
 	// Dial 112 heatmap data
@@ -231,6 +360,25 @@ export default function Home() {
 			"rgba(245, 158, 11, 0.8)",
 			"rgba(217, 119, 6, 1)",
 			"rgba(180, 83, 9, 1)",
+		],
+	};
+
+	// Accident heatmap data
+	const accidentHeatmapData = {
+		data: accidentAllRecords.map((record) => ({
+			position: { lat: record.latitude, lng: record.longitude },
+			weight: record.accidentCount || 1,
+		})),
+		visible: accidentHeatmapVisible,
+		radius: 20,
+		opacity: 0.6,
+		gradient: [
+			"rgba(239, 68, 68, 0)", // red transparent
+			"rgba(239, 68, 68, 0.4)",
+			"rgba(220, 38, 38, 0.6)",
+			"rgba(185, 28, 28, 0.8)",
+			"rgba(153, 27, 27, 1)",
+			"rgba(127, 29, 29, 1)",
 		],
 	};
 
@@ -464,6 +612,51 @@ export default function Home() {
 									variant="warning"
 								/>
 							</div>
+
+							{/* Accident Points Toggle */}
+							<div className="flex items-center justify-between cursor-pointer group">
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🚗 Accident Points</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												accidentVisible ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{accidentVisible ? "ON" : "OFF"}
+										</span>
+										{accidentLoading && <div className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin"></div>}
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Viewport-filtered markers ({accidentRecords.length} visible)</p>
+								</div>
+								<Toggle
+									checked={accidentVisible}
+									onCheckedChange={setAccidentVisible}
+									variant="destructive"
+								/>
+							</div>
+
+							{/* Accident Heatmap Toggle */}
+							<div className="flex items-center justify-between cursor-pointer group">
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🔥 Accident Heatmap</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												accidentHeatmapVisible ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{accidentHeatmapVisible ? "ON" : "OFF"}
+										</span>
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Density visualization ({accidentAllRecords.length} total)</p>
+								</div>
+								<Toggle
+									checked={accidentHeatmapVisible}
+									onCheckedChange={setAccidentHeatmapVisible}
+									variant="destructive"
+								/>
+							</div>
 						</div>
 
 						{/* Layer Statistics */}
@@ -471,12 +664,24 @@ export default function Home() {
 							<div className="text-xs text-gray-500 space-y-1">
 								<div className="flex justify-between">
 									<span>Active Layers:</span>
-									<span className="font-medium">{[kmlLayerVisible, geoJsonLayerVisible, cctvLayerVisible, dial112Visible, dial112HeatmapVisible].filter(Boolean).length}/5</span>
+									<span className="font-medium">
+										{
+											[kmlLayerVisible, geoJsonLayerVisible, cctvLayerVisible, dial112Visible, dial112HeatmapVisible, accidentVisible, accidentHeatmapVisible].filter(Boolean)
+												.length
+										}
+										/7
+									</span>
 								</div>
 								<div className="flex justify-between">
 									<span>Dial 112 Calls:</span>
 									<span className="font-medium text-amber-400">
 										{dial112Calls.length} visible / {dial112AllCalls.length} total
+									</span>
+								</div>
+								<div className="flex justify-between">
+									<span>Accident Records:</span>
+									<span className="font-medium text-red-400">
+										{accidentRecords.length} visible / {accidentAllRecords.length} total
 									</span>
 								</div>
 								<div className="flex justify-between">
@@ -499,11 +704,11 @@ export default function Home() {
 					className="w-full h-full"
 					markerGroups={markerGroups}
 					heatmap={{
-						data: dial112HeatmapVisible ? dial112HeatmapData.data : [],
-						visible: dial112HeatmapVisible,
+						data: [...(dial112HeatmapVisible ? dial112HeatmapData.data : []), ...(accidentHeatmapVisible ? accidentHeatmapData.data : [])],
+						visible: dial112HeatmapVisible || accidentHeatmapVisible,
 						radius: 20,
 						opacity: 0.6,
-						gradient: dial112HeatmapData.gradient,
+						gradient: dial112HeatmapVisible ? dial112HeatmapData.gradient : accidentHeatmapData.gradient,
 					}}
 					kmlLayer={kmlLayerConfig}
 					geoJsonLayer={geoJsonLayerConfig}
