@@ -632,7 +632,7 @@ export default function Home() {
 								<Toggle
 									checked={accidentVisible}
 									onCheckedChange={setAccidentVisible}
-									variant="destructive"
+									variant="danger"
 								/>
 							</div>
 
@@ -654,7 +654,7 @@ export default function Home() {
 								<Toggle
 									checked={accidentHeatmapVisible}
 									onCheckedChange={setAccidentHeatmapVisible}
-									variant="destructive"
+									variant="danger"
 								/>
 							</div>
 						</div>
