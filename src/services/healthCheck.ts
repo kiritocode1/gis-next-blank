@@ -7,7 +7,7 @@ export interface HealthCheckResult {
 	description: string;
 	status: "success" | "error" | "timeout";
 	responseTime: number;
-	dataSample?: any[];
+	dataSample?: unknown[];
 	schemaValidation: {
 		isValid: boolean;
 		errors?: z.ZodError;
@@ -128,7 +128,7 @@ export async function testEndpoint(config: EndpointConfig): Promise<HealthCheckR
 	}
 }
 
-function analyzeSchemaDifferences(data: any, schema: z.ZodSchema, error: z.ZodError) {
+function analyzeSchemaDifferences(data: unknown, schema: z.ZodSchema, error: z.ZodError) {
 	const missingFields: string[] = [];
 	const extraFields: string[] = [];
 	const typeMismatches: Array<{ field: string; expected: string; actual: string }> = [];
@@ -138,37 +138,42 @@ function analyzeSchemaDifferences(data: any, schema: z.ZodSchema, error: z.ZodEr
 		const fieldPath = issue.path.join(".");
 
 		if (issue.code === "invalid_type") {
+			const pathKey = typeof issue.path[0] === "string" ? issue.path[0] : String(issue.path[0]);
+			const actualType = data && typeof data === "object" && data !== null && pathKey in data ? typeof (data as Record<string, unknown>)[pathKey] : "unknown";
 			typeMismatches.push({
 				field: fieldPath,
 				expected: issue.expected,
-				actual: typeof data[issue.path[0]],
+				actual: actualType,
 			});
 		} else if (issue.code === "unrecognized_keys") {
 			extraFields.push(...issue.keys);
 		} else if (issue.code === "invalid_union") {
+			const pathKey = typeof issue.path[0] === "string" ? issue.path[0] : String(issue.path[0]);
+			const actualType = data && typeof data === "object" && data !== null && pathKey in data ? typeof (data as Record<string, unknown>)[pathKey] : "unknown";
 			typeMismatches.push({
 				field: fieldPath,
 				expected: "union type",
-				actual: typeof data[issue.path[0]],
+				actual: actualType,
 			});
 		}
 	});
 
 	// Check for missing required fields by comparing with sample data
-	if (data && typeof data === "object") {
-		const sampleItem = Array.isArray(data.data)
-			? data.data[0]
-			: Array.isArray(data.data_points)
-			? data.data_points[0]
-			: Array.isArray(data.features)
-			? data.features[0]
-			: Array.isArray(data.routes)
-			? data.routes[0]
-			: Array.isArray(data.categories)
-			? data.categories[0]
-			: data;
+	if (data && typeof data === "object" && data !== null) {
+		const dataObj = data as Record<string, unknown>;
+		const sampleItem = Array.isArray(dataObj.data)
+			? dataObj.data[0]
+			: Array.isArray(dataObj.data_points)
+			? dataObj.data_points[0]
+			: Array.isArray(dataObj.features)
+			? dataObj.features[0]
+			: Array.isArray(dataObj.routes)
+			? dataObj.routes[0]
+			: Array.isArray(dataObj.categories)
+			? dataObj.categories[0]
+			: dataObj;
 
-		if (sampleItem && typeof sampleItem === "object") {
+		if (sampleItem && typeof sampleItem === "object" && sampleItem !== null) {
 			// This is a simplified check - in a real implementation, you'd want to
 			// recursively check the schema structure
 			const expectedFields = ["id", "name", "latitude", "longitude"];
