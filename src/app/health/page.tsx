@@ -395,7 +395,7 @@ export default function HealthPage() {
 																<div>
 																	<h4 className="font-semibold text-yellow-400 mb-3 text-lg">Schema Differences</h4>
 																	<div className="space-y-4">
-																		{result.schemaDifferences?.missingFields.length > 0 && (
+																		{result.schemaDifferences?.missingFields && result.schemaDifferences.missingFields.length > 0 && (
 																			<div>
 																				<h5 className="text-sm font-semibold text-gray-300 mb-2">Missing Fields</h5>
 																				<div className="flex flex-wrap gap-2">
@@ -412,7 +412,7 @@ export default function HealthPage() {
 																			</div>
 																		)}
 
-																		{result.schemaDifferences?.extraFields.length > 0 && (
+																		{result.schemaDifferences?.extraFields && result.schemaDifferences.extraFields.length > 0 && (
 																			<div>
 																				<h5 className="text-sm font-semibold text-gray-300 mb-2">Extra Fields</h5>
 																				<div className="flex flex-wrap gap-2">
@@ -429,7 +429,7 @@ export default function HealthPage() {
 																			</div>
 																		)}
 
-																		{result.schemaDifferences?.typeMismatches.length > 0 && (
+																		{result.schemaDifferences?.typeMismatches && result.schemaDifferences.typeMismatches.length > 0 && (
 																			<div>
 																				<h5 className="text-sm font-semibold text-gray-300 mb-2">Type Mismatches</h5>
 																				<div className="space-y-2">
