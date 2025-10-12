@@ -491,8 +491,14 @@ export default function Home() {
 		<>
 			{/* Header */}
 			<div className="fixed top-0 left-0 right-0 z-50 bg-black backdrop-blur-md border-b border-white/10">
-				<div className="flex items-center justify-center h-16 px-6">
+				<div className="flex items-center justify-between h-16 px-6">
 					<h1 className="text-2xl font-bold text-white tracking-wide">NASHIK GIS 2.0</h1>
+					<a
+						href="/health"
+						className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+					>
+						Health Check
+					</a>
 				</div>
 			</div>
 
