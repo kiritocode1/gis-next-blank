@@ -67,7 +67,7 @@ export async function GET() {
 							const chunk = `event: row\ndata: ${JSON.stringify(payload)}\n\n`;
 							controller.enqueue(encoder.encode(chunk));
 							count++;
-						} catch (enqueueError) {
+						} catch {
 							// Client disconnected mid-stream
 							console.log(`⚠️ Client disconnected at ${count} records`);
 							clientDisconnected = true;

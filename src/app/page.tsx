@@ -28,7 +28,7 @@ import {
 export default function Home() {
 	// State for selected point and search
 	const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number; zoom?: number } | undefined>();
-	const [searchQuery, setSearchQuery] = useState("");
+	const [searchQuery] = useState("");
 	const [clickedPoint, setClickedPoint] = useState<{ lat: number; lng: number; title?: string; group?: string } | null>(null);
 	const [kmlLayerVisible, setKmlLayerVisible] = useState(false); // Start disabled by default
 	const [geoJsonLayerVisible, setGeoJsonLayerVisible] = useState(false);
@@ -58,7 +58,7 @@ export default function Home() {
 
 	// Police station layer state
 	const [policeLayerVisible, setPoliceLayerVisible] = useState(false);
-	const [policeLocations, setPoliceLocations] = useState<any[]>([]);
+	const [policeLocations, setPoliceLocations] = useState<MapDataPoint[]>([]);
 	const [policeLoading, setPoliceLoading] = useState(false);
 	const [policeHeatmapVisible, setPoliceHeatmapVisible] = useState(false);
 
@@ -865,22 +865,22 @@ export default function Home() {
 		console.log("Clicked point:", point); // For AI integration
 	};
 
-	// Handle search and navigation
-	const handleSearch = () => {
-		if (searchQuery.trim()) {
-			const results = searchPoints(searchQuery);
-			if (results.length > 0) {
-				const firstResult = results[0];
-				navigateToPoint({ ...firstResult.position, zoom: 16 });
-				setClickedPoint({
-					lat: firstResult.position.lat,
-					lng: firstResult.position.lng,
-					title: firstResult.title,
-					group: firstResult.group,
-				});
-			}
-		}
-	};
+	// Handle search and navigation - currently unused
+	// const handleSearch = () => {
+	// 	if (searchQuery.trim()) {
+	// 		const results = searchPoints(searchQuery);
+	// 		if (results.length > 0) {
+	// 			const firstResult = results[0];
+	// 			navigateToPoint({ ...firstResult.position, zoom: 16 });
+	// 			setClickedPoint({
+	// 				lat: firstResult.position.lat,
+	// 				lng: firstResult.position.lng,
+	// 				title: firstResult.title,
+	// 				group: firstResult.group,
+	// 			});
+	// 		}
+	// 	}
+	// };
 
 	// Debug logging for render props
 	console.log("🗺️ Page: Rendering with current state:", {

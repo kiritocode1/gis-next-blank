@@ -90,21 +90,7 @@ const ChevronLeftIcon = ({ className }: { className?: string }) => (
 	</svg>
 );
 
-const ChevronRightIcon = ({ className }: { className?: string }) => (
-	<svg
-		className={className}
-		fill="none"
-		stroke="currentColor"
-		viewBox="0 0 24 24"
-	>
-		<path
-			strokeLinecap="round"
-			strokeLinejoin="round"
-			strokeWidth={2}
-			d="M9 5l7 7-7 7"
-		/>
-	</svg>
-);
+// ChevronRightIcon removed as it's not currently used
 
 const RouteIcon = ({ className }: { className?: string }) => (
 	<svg
@@ -158,12 +144,7 @@ export default function Sidebar({ children, processionRoutes }: SidebarProps) {
 		},
 	];
 
-	const toggleSidebar = () => {
-		setIsOpen(!isOpen);
-		if (!isOpen) {
-			setActiveSection(null);
-		}
-	};
+	// toggleSidebar removed as it's not currently used
 
 	const selectSection = (sectionId: string) => {
 		if (activeSection === sectionId) {

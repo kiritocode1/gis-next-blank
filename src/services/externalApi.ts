@@ -73,8 +73,8 @@ export interface MapDataPoint {
 export interface MapDataResponse {
 	success: boolean;
 	data_points: MapDataPoint[];
-	crime_data?: any[];
-	processions_routes?: any[];
+	crime_data?: unknown[];
+	processions_routes?: unknown[];
 }
 
 export interface ProcessionRoute {

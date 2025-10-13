@@ -69,7 +69,7 @@ export async function testEndpoint(config: EndpointConfig): Promise<HealthCheckR
 		} else if (Array.isArray(data.data_points)) {
 			// For map data, filter police stations if this is the police stations endpoint
 			if (config.name === "Police Stations") {
-				const policeStations = data.data_points.filter((item: any) => item.category_name === "पोलीस आस्थापना");
+				const policeStations = data.data_points.filter((item: { category_name: string }) => item.category_name === "पोलीस आस्थापना");
 				if (policeStations.length > 0) {
 					dataSample = policeStations.slice(0, 5);
 				} else {
