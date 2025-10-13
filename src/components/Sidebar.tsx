@@ -106,7 +106,7 @@ const ChevronRightIcon = ({ className }: { className?: string }) => (
 	</svg>
 );
 
-const GlobeIcon = ({ className }: { className?: string }) => (
+const RouteIcon = ({ className }: { className?: string }) => (
 	<svg
 		className={className}
 		fill="none"
@@ -117,16 +117,29 @@ const GlobeIcon = ({ className }: { className?: string }) => (
 			strokeLinecap="round"
 			strokeLinejoin="round"
 			strokeWidth={2}
-			d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+			d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+		/>
+		<path
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			strokeWidth={2}
+			d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+		/>
+		<path
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			strokeWidth={2}
+			d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
 		/>
 	</svg>
 );
 
 export interface SidebarProps {
 	children: React.ReactNode;
+	processionRoutes?: React.ReactNode;
 }
 
-export default function Sidebar({ children }: SidebarProps) {
+export default function Sidebar({ children, processionRoutes }: SidebarProps) {
 	const [isOpen, setIsOpen] = useState(true);
 	const [activeSection, setActiveSection] = useState<string | null>("layers");
 
@@ -144,10 +157,10 @@ export default function Sidebar({ children }: SidebarProps) {
 			description: "Search locations",
 		},
 		{
-			id: "map",
-			icon: GlobeIcon,
-			title: "Map Settings",
-			description: "Configure map display",
+			id: "routes",
+			icon: RouteIcon,
+			title: "Procession Routes",
+			description: "Manage festival routes",
 		},
 		{
 			id: "settings",
@@ -271,30 +284,7 @@ export default function Sidebar({ children }: SidebarProps) {
 										</div>
 									)}
 
-									{activeSection === "map" && (
-										<div className="space-y-4">
-											<div className="space-y-3">
-												<label className="block text-sm font-medium text-gray-300">Map Style</label>
-												<select className="w-full px-3 py-2 bg-gray-900/50 border border-gray-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-gray-600/50">
-													<option>Standard</option>
-													<option>Satellite</option>
-													<option>Terrain</option>
-													<option>Hybrid</option>
-												</select>
-											</div>
-
-											<div className="space-y-3">
-												<label className="block text-sm font-medium text-gray-300">Zoom Level</label>
-												<input
-													type="range"
-													min="1"
-													max="20"
-													defaultValue="10"
-													className="w-full accent-gray-600"
-												/>
-											</div>
-										</div>
-									)}
+									{activeSection === "routes" && <div className="space-y-4">{processionRoutes}</div>}
 
 									{activeSection === "settings" && (
 										<div className="space-y-4">

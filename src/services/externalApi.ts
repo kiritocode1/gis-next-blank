@@ -77,6 +77,40 @@ export interface MapDataResponse {
 	processions_routes?: any[];
 }
 
+export interface ProcessionRoute {
+	id: number;
+	user_id: number;
+	police_station: string;
+	village: string;
+	village_id: number | null;
+	festival_name: string;
+	procession_number: string;
+	start_point_lat: string;
+	start_point_lng: string;
+	end_point_lat: string;
+	end_point_lng: string;
+	start_address: string;
+	end_address: string;
+	route_coordinates: string; // JSON string
+	total_distance: number;
+	start_time: string | null;
+	end_time: string | null;
+	duration_minutes: number | null;
+	expected_crowd: number | null;
+	description: string;
+	created_at: string;
+	status: string;
+	verified_at: string | null;
+	verified_by: string | null;
+}
+
+export interface ProcessionRoutesResponse {
+	success: boolean;
+	routes: ProcessionRoute[];
+	count?: number;
+	categorized?: Record<string, ProcessionRoute[]>;
+}
+
 export interface Hospital {
 	id: string | number;
 	name: string;
@@ -521,6 +555,57 @@ export async function fetchMapData(): Promise<MapDataResponse> {
 		return data;
 	} catch (error) {
 		console.error("❌ Error fetching map data:", error);
+		throw error;
+	}
+}
+
+/**
+ * Fetch procession routes from the external API
+ */
+export async function fetchProcessionRoutes(): Promise<ProcessionRoute[]> {
+	try {
+		console.log("🛤️ Fetching procession routes from external API...");
+
+		const response = await fetch(`${BASE_URL}?endpoint=get-procession-routes`, {
+			method: "GET",
+			headers: {
+				Accept: "application/json",
+				"Content-Type": "application/json",
+			},
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const data: ProcessionRoutesResponse = await response.json();
+
+		if (!data.success) {
+			throw new Error("API returned success: false");
+		}
+
+		console.log(`✅ Fetched ${data.routes.length} procession routes`);
+
+		// Parse route coordinates and validate data
+		const validRoutes = data.routes
+			.filter((route) => {
+				try {
+					const coords = JSON.parse(route.route_coordinates);
+					return Array.isArray(coords) && coords.length > 0;
+				} catch {
+					return false;
+				}
+			})
+			.map((route) => ({
+				...route,
+				// Keep coordinates as strings to match interface
+			}));
+
+		console.log(`📍 Valid procession routes: ${validRoutes.length}/${data.routes.length}`);
+
+		return validRoutes;
+	} catch (error) {
+		console.error("❌ Error fetching procession routes:", error);
 		throw error;
 	}
 }

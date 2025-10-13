@@ -21,6 +21,8 @@ import {
 	streamAccidentData,
 	fetchMapData,
 	type MapDataPoint,
+	fetchProcessionRoutes,
+	type ProcessionRoute,
 } from "@/services/externalApi";
 
 export default function Home() {
@@ -59,6 +61,11 @@ export default function Home() {
 	const [policeLocations, setPoliceLocations] = useState<any[]>([]);
 	const [policeLoading, setPoliceLoading] = useState(false);
 	const [policeHeatmapVisible, setPoliceHeatmapVisible] = useState(false);
+
+	// Procession routes state
+	const [processionRoutes, setProcessionRoutes] = useState<ProcessionRoute[]>([]);
+	const [processionLoading, setProcessionLoading] = useState(false);
+	const [processionsVisible, setProcessionsVisible] = useState<{ [festivalName: string]: boolean }>({});
 
 	// External API data state
 	const [cctvLocations, setCctvLocations] = useState<CCTVLocation[]>([]);
@@ -194,6 +201,29 @@ export default function Home() {
 
 		loadPoliceData();
 	}, [policeLayerVisible, policeLocations.length, policeLoading]);
+
+	// Load Procession Routes data when any festival toggle is enabled
+	useEffect(() => {
+		const loadProcessionData = async () => {
+			const hasVisibleFestivals = Object.values(processionsVisible).some((visible) => visible);
+
+			if (hasVisibleFestivals && processionRoutes.length === 0 && !processionLoading) {
+				setProcessionLoading(true);
+				try {
+					console.log("🛤️ Loading Procession Routes data...");
+					const data = await fetchProcessionRoutes();
+					setProcessionRoutes(data);
+					console.log(`✅ Loaded ${data.length} Procession Routes`);
+				} catch (error) {
+					console.error("❌ Failed to load Procession Routes data:", error);
+				} finally {
+					setProcessionLoading(false);
+				}
+			}
+		};
+
+		loadProcessionData();
+	}, [processionsVisible, processionRoutes.length, processionLoading]);
 
 	// Load Dial 112 via SSE (cache all points, no rendering yet)
 	useEffect(() => {
@@ -561,6 +591,82 @@ export default function Home() {
 		},
 	];
 
+	// Festival color palette
+	const festivalColors = [
+		"#EF4444", // red
+		"#F97316", // orange
+		"#EAB308", // amber
+		"#22C55E", // green
+		"#3B82F6", // blue
+		"#8B5CF6", // purple
+		"#EC4899", // pink
+		"#06B6D4", // cyan
+		"#84CC16", // lime
+		"#F59E0B", // yellow
+	];
+
+	// Generate color for festival (consistent hash-based)
+	const getFestivalColor = (festivalName: string) => {
+		let hash = 0;
+		for (let i = 0; i < festivalName.length; i++) {
+			hash = festivalName.charCodeAt(i) + ((hash << 5) - hash);
+		}
+		return festivalColors[Math.abs(hash) % festivalColors.length];
+	};
+
+	// Process procession routes for rendering
+	const processProcessionRoutes = () => {
+		const groupedRoutes = processionRoutes.reduce((acc, route) => {
+			if (!acc[route.festival_name]) {
+				acc[route.festival_name] = [];
+			}
+			acc[route.festival_name].push(route);
+			return acc;
+		}, {} as { [festivalName: string]: ProcessionRoute[] });
+
+		return Object.entries(groupedRoutes).map(([festivalName, routes]) => {
+			const color = getFestivalColor(festivalName);
+			return {
+				festivalName,
+				color,
+				visible: processionsVisible[festivalName] || false,
+				routes: routes
+					.map((route) => {
+						try {
+							const coordinates = JSON.parse(route.route_coordinates);
+							return {
+								id: route.id,
+								path: coordinates.map((coord: any) => ({
+									lat: parseFloat(coord.latitude),
+									lng: parseFloat(coord.longitude),
+								})),
+								startPoint: {
+									lat: parseFloat(route.start_point_lat),
+									lng: parseFloat(route.start_point_lng),
+								},
+								endPoint: {
+									lat: parseFloat(route.end_point_lat),
+									lng: parseFloat(route.end_point_lng),
+								},
+								festival_name: route.festival_name,
+								procession_number: route.procession_number,
+								start_address: route.start_address,
+								end_address: route.end_address,
+								total_distance: route.total_distance,
+								description: route.description,
+							};
+						} catch (error) {
+							console.error(`Failed to parse route coordinates for route ${route.id}:`, error);
+							return null;
+						}
+					})
+					.filter((route): route is NonNullable<typeof route> => route !== null),
+			};
+		});
+	};
+
+	const processedProcessionRoutes = processProcessionRoutes();
+
 	// Dial 112 heatmap data
 	const dial112HeatmapData = {
 		data: dial112AllCalls.map((call) => ({
@@ -803,7 +909,116 @@ export default function Home() {
 				</div>
 			</div>
 
-			<Sidebar>
+			<Sidebar
+				processionRoutes={
+					<div className="space-y-4">
+						{processedProcessionRoutes.length > 0 ? (
+							<div className="space-y-3">
+								{processedProcessionRoutes.map((festivalGroup) => (
+									<div
+										key={festivalGroup.festivalName}
+										className="flex items-center justify-between cursor-pointer group"
+									>
+										<div className="flex-1">
+											<div className="flex items-center space-x-2">
+												<div
+													className="w-3 h-3 rounded-full border border-white/20"
+													style={{ backgroundColor: festivalGroup.color }}
+												></div>
+												<span className="text-sm font-medium text-gray-200 truncate">{festivalGroup.festivalName}</span>
+												<span
+													className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+														processionsVisible[festivalGroup.festivalName]
+															? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+															: "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+													}`}
+												>
+													{processionsVisible[festivalGroup.festivalName] ? "ON" : "OFF"}
+												</span>
+												{processionLoading && <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin"></div>}
+											</div>
+											<p className="text-xs text-gray-400 mt-0.5">
+												{festivalGroup.routes.length} route{festivalGroup.routes.length !== 1 ? "s" : ""}
+											</p>
+										</div>
+										<Toggle
+											checked={processionsVisible[festivalGroup.festivalName] || false}
+											onCheckedChange={(checked) => {
+												setProcessionsVisible((prev) => ({
+													...prev,
+													[festivalGroup.festivalName]: checked,
+												}));
+											}}
+											variant="default"
+										/>
+									</div>
+								))}
+							</div>
+						) : (
+							<div className="text-center py-8">
+								<div className="text-gray-400 mb-4">
+									<svg
+										className="w-12 h-12 mx-auto mb-3 text-gray-500"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={1.5}
+											d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+										/>
+									</svg>
+									<p className="text-sm text-gray-400 mb-2">No procession routes loaded</p>
+									<p className="text-xs text-gray-500">Click the button below to load available festival routes</p>
+								</div>
+								<button
+									onClick={async () => {
+										setProcessionLoading(true);
+										try {
+											console.log("🛤️ Loading Procession Routes data...");
+											const data = await fetchProcessionRoutes();
+											setProcessionRoutes(data);
+											console.log(`✅ Loaded ${data.length} Procession Routes`);
+										} catch (error) {
+											console.error("❌ Failed to load Procession Routes data:", error);
+										} finally {
+											setProcessionLoading(false);
+										}
+									}}
+									disabled={processionLoading}
+									className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 mx-auto"
+								>
+									{processionLoading ? (
+										<>
+											<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+											<span>Loading...</span>
+										</>
+									) : (
+										<>
+											<svg
+												className="w-4 h-4"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+												/>
+											</svg>
+											<span>Load Procession Routes</span>
+										</>
+									)}
+								</button>
+							</div>
+						)}
+					</div>
+				}
+			>
 				<div className="space-y-4">
 					<div className="space-y-3">
 						<h3 className="text-sm font-medium text-gray-300 mb-3">Map Layers</h3>
@@ -1221,6 +1436,7 @@ export default function Home() {
 					width="100vw"
 					className="w-full h-full"
 					markerGroups={markerGroups}
+					polylines={processedProcessionRoutes}
 					heatmap={{
 						data: [
 							...(dial112HeatmapVisible ? dial112HeatmapData.data : []),

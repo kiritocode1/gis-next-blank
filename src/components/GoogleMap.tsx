@@ -46,6 +46,23 @@ interface GoogleMapProps {
 			fillOpacity?: number;
 		};
 	};
+	polylines?: Array<{
+		festivalName: string;
+		color: string;
+		visible: boolean;
+		routes: Array<{
+			id: number;
+			path: Array<{ lat: number; lng: number }>;
+			startPoint: { lat: number; lng: number };
+			endPoint: { lat: number; lng: number };
+			festival_name: string;
+			procession_number: string;
+			start_address: string;
+			end_address: string;
+			total_distance: number;
+			description: string;
+		}>;
+	}>;
 	selectedPoint?: { lat: number; lng: number; zoom?: number };
 	onPointClick?: (point: { lat: number; lng: number; title?: string; group?: string }) => void;
 	searchablePoints?: Array<{
@@ -84,6 +101,7 @@ export default function GoogleMap({
 	heatmap,
 	kmlLayer,
 	geoJsonLayer,
+	polylines = [],
 	selectedPoint,
 	onPointClick,
 	onKMLToggle,
@@ -108,6 +126,7 @@ export default function GoogleMap({
 	const kmlAbortControllerRef = useRef<AbortController | null>(null);
 	const geoJsonAbortControllerRef = useRef<AbortController | null>(null);
 	const geoJsonFeaturesRef = useRef<any[]>([]);
+	const polylinesRef = useRef<any[]>([]);
 	const [kmlVisible, setKmlVisible] = useState(kmlLayer?.visible ?? false);
 	const [geoJsonVisible, setGeoJsonVisible] = useState(geoJsonLayer?.visible ?? false);
 	const [markersVisible, setMarkersVisible] = useState(true);
@@ -383,6 +402,111 @@ export default function GoogleMap({
 			});
 		}
 	}, [markers, markerGroups, markersVisible, isLoaded, onPointClick]);
+
+	// Handle polylines (procession routes)
+	useEffect(() => {
+		if (mapInstanceRef.current && isLoaded && window.google?.maps) {
+			// Clear existing polylines
+			if (polylinesRef.current) {
+				polylinesRef.current.forEach((polyline) => {
+					polyline.setMap(null);
+				});
+				polylinesRef.current = [];
+			}
+
+			// Render visible polylines
+			polylines.forEach((festivalGroup) => {
+				if (festivalGroup.visible) {
+					festivalGroup.routes.forEach((route) => {
+						// Create polyline path
+						const path = route.path.map((coord) => new window.google.maps.LatLng(coord.lat, coord.lng));
+
+						// Create main polyline
+						const polyline = new window.google.maps.Polyline({
+							path: path,
+							geodesic: true,
+							strokeColor: festivalGroup.color,
+							strokeOpacity: 1.0,
+							strokeWeight: 5,
+							zIndex: 1000, // Above points but below markers
+						});
+
+						// Add glow effect with shadow (wider, more transparent)
+						const glowPolyline = new window.google.maps.Polyline({
+							path: path,
+							geodesic: true,
+							strokeColor: festivalGroup.color,
+							strokeOpacity: 0.4,
+							strokeWeight: 15,
+							zIndex: 999,
+						});
+
+						// Add outer glow effect (even wider, more transparent)
+						const outerGlowPolyline = new window.google.maps.Polyline({
+							path: path,
+							geodesic: true,
+							strokeColor: festivalGroup.color,
+							strokeOpacity: 0.2,
+							strokeWeight: 25,
+							zIndex: 998,
+						});
+
+						// Add polylines to map
+						polyline.setMap(mapInstanceRef.current);
+						glowPolyline.setMap(mapInstanceRef.current);
+						outerGlowPolyline.setMap(mapInstanceRef.current);
+
+						// Add start marker (green circle with border)
+						const startMarker = new window.google.maps.Marker({
+							position: new window.google.maps.LatLng(route.startPoint.lat, route.startPoint.lng),
+							map: mapInstanceRef.current,
+							title: `Start: ${route.start_address}`,
+							icon: {
+								path: window.google.maps.SymbolPath.CIRCLE,
+								scale: 8,
+								fillColor: "#22C55E", // Green
+								fillOpacity: 1,
+								strokeColor: "#FFFFFF",
+								strokeWeight: 3,
+							},
+							zIndex: 1001,
+						});
+
+						// Add end marker (red circle with border)
+						const endMarker = new window.google.maps.Marker({
+							position: new window.google.maps.LatLng(route.endPoint.lat, route.endPoint.lng),
+							map: mapInstanceRef.current,
+							title: `End: ${route.end_address}`,
+							icon: {
+								path: window.google.maps.SymbolPath.CIRCLE,
+								scale: 8,
+								fillColor: "#EF4444", // Red
+								fillOpacity: 1,
+								strokeColor: "#FFFFFF",
+								strokeWeight: 3,
+							},
+							zIndex: 1001,
+						});
+
+						// Add click handler for route info
+						polyline.addListener("click", () => {
+							if (onPointClick) {
+								onPointClick({
+									lat: route.startPoint.lat,
+									lng: route.startPoint.lng,
+									title: `${route.festival_name} - ${route.procession_number}`,
+									group: "Procession Route",
+								});
+							}
+						});
+
+						// Store references for cleanup
+						polylinesRef.current.push(polyline, glowPolyline, outerGlowPolyline, startMarker, endMarker);
+					});
+				}
+			});
+		}
+	}, [polylines, isLoaded, onPointClick]);
 
 	// Handle heatmap
 	useEffect(() => {

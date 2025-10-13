@@ -2,9 +2,19 @@
 
 ## Latest Changes (Current Session)
 
-### Added Missing Procession-Related Endpoints to Health Check System
+### Implemented Procession Routes Panel
 
 **Date**: Current session  
+**Files Modified**:
+
+-   `src/components/Sidebar.tsx` (Lines 109-135, 158-163, 286) - Replaced Map Settings section with Procession Routes panel
+-   `src/services/externalApi.ts` (Lines 80-112, 562-615) - Added ProcessionRoute interface and fetchProcessionRoutes function
+-   `src/app/page.tsx` (Lines 24-25, 65-68, 205-226, 594-666, 1246-1293, 1322) - Added procession routes state, loading logic, festival toggles, and route processing
+-   `src/components/GoogleMap.tsx` (Lines 49-65, 104, 129, 405-495) - Added polylines prop and rendering logic with glow effects
+
+### Added Missing Procession-Related Endpoints to Health Check System
+
+**Date**: Previous session  
 **Files Modified**:
 
 -   `src/lib/schemas.ts` (Lines 172-205, 405-416) - Added schemas and endpoint configs for procession-related endpoints
@@ -26,19 +36,31 @@
 
 **Changes Made**:
 
-1. **Added Procession-Related Endpoints**: Added missing endpoints to health check system:
+1. **Procession Routes Panel Implementation**:
+
+    - Replaced Map Settings sidebar section with Procession Routes panel
+    - Added festival-based route grouping with color-coded toggles
+    - Implemented route rendering with glowing polylines and start/end markers
+    - Added lazy loading - routes only fetch when festival toggles are enabled
+    - Created hash-based color assignment for consistent festival colors
+    - Added route click handlers for detailed information display
+    - **Fixed sidebar section routing**: Moved procession routes from "Layers" section to dedicated "Procession Routes" section using new `processionRoutes` prop
+    - **Added load button**: Added "Load Procession Routes" button to fetch and display festival routes when sidebar is empty
+    - **Enhanced polyline rendering**: Fixed missing setMap() calls and added triple-layer glow effect (main line + inner glow + outer glow) with improved marker styling
+
+2. **Added Procession-Related Endpoints**: Added missing endpoints to health check system:
 
     - `get-route-gap-analysis` - Analyzes route coverage and identifies gaps
     - `get-festivals` - Festival data and categories
     - Enhanced `get-procession-routes` schema with optional categorized data
 
-2. **Fixed Police Stations Schema**: Changed police stations endpoint to use `get-map-data` and filter for police stations with category "पोलीस आस्थापना" instead of using the empty `get-police-stations` endpoint. Successfully found 180 police stations out of 8,132 total data points.
+3. **Fixed Police Stations Schema**: Changed police stations endpoint to use `get-map-data` and filter for police stations with category "पोलीस आस्थापना" instead of using the empty `get-police-stations` endpoint. Successfully found 180 police stations out of 8,132 total data points.
 
-3. **Fixed Route Gap Analysis Schema**: Updated schema to match actual API response structure with `gap_analysis` and `summary` fields instead of `analysis` field, and made fields optional to handle error cases
+4. **Fixed Route Gap Analysis Schema**: Updated schema to match actual API response structure with `gap_analysis` and `summary` fields instead of `analysis` field, and made fields optional to handle error cases
 
-4. **Added Police Stations to Main Map**: Integrated police stations from map data into main page with toggles and heatmap functionality, matching the pattern of other layers (CCTV, ATM, Bank, Hospital)
+5. **Added Police Stations to Main Map**: Integrated police stations from map data into main page with toggles and heatmap functionality, matching the pattern of other layers (CCTV, ATM, Bank, Hospital)
 
-5. **Zod Schema Definition**: Created strict schemas for all external API endpoints including:
+6. **Zod Schema Definition**: Created strict schemas for all external API endpoints including:
 
     - Map data with crime incidents, police stations, emergency services
     - Categories and subcategories for data classification
@@ -47,7 +69,7 @@
     - Traffic management (AI monitoring, accident data)
     - System endpoints (health check, dashboard stats)
 
-6. **Health Check Service**: Built comprehensive testing service that:
+7. **Health Check Service**: Built comprehensive testing service that:
 
     - Tests all 15+ external API endpoints from rhtechnology.in
     - Validates responses against Zod schemas
@@ -55,7 +77,7 @@
     - Analyzes schema differences (missing fields, extra fields, type mismatches)
     - Provides sample data (first 5 items) from each endpoint
 
-7. **Health Check UI**: Created modern, responsive interface with:
+8. **Health Check UI**: Created modern, responsive interface with:
 
     - **Overview Tab**: Quick status overview with success/failure counts
     - **Details Tab**: Detailed endpoint information with sample data
@@ -63,9 +85,9 @@
     - Real-time refresh functionality
     - Color-coded status indicators and response time monitoring
 
-8. **Navigation Integration**: Added health check link in main page header for easy access
+9. **Navigation Integration**: Added health check link in main page header for easy access
 
-9. **Documentation**: Created comprehensive documentation covering:
+10. **Documentation**: Created comprehensive documentation covering:
     - Feature overview and usage instructions
     - Complete list of monitored endpoints
     - Schema validation details
