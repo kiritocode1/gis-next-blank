@@ -914,6 +914,42 @@ export default function Home() {
 					<div className="space-y-4">
 						{processedProcessionRoutes.length > 0 ? (
 							<div className="space-y-3">
+								{/* ALL Toggle */}
+								<div className="flex items-center justify-between cursor-pointer group border-b border-gray-700/50 pb-3 mb-3">
+									<div className="flex-1 min-w-0">
+										<div className="flex items-center space-x-2">
+											<span className="text-sm font-medium text-gray-200">ALL</span>
+											<span
+												className={`px-2 py-0.5 text-xs rounded-full transition-colors flex-shrink-0 ${
+													Object.values(processionsVisible).every((visible) => visible)
+														? "bg-green-500/20 text-green-400 border border-green-500/30"
+														: Object.values(processionsVisible).some((visible) => visible)
+														? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+														: "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+												}`}
+											>
+												{Object.values(processionsVisible).every((visible) => visible)
+													? "ALL ON"
+													: Object.values(processionsVisible).some((visible) => visible)
+													? "SOME ON"
+													: "ALL OFF"}
+											</span>
+										</div>
+										<p className="text-xs text-gray-400 mt-0.5">Toggle all {processedProcessionRoutes.length} festivals</p>
+									</div>
+									<Toggle
+										checked={Object.values(processionsVisible).every((visible) => visible)}
+										onCheckedChange={(checked) => {
+											const newVisibility: { [festivalName: string]: boolean } = {};
+											processedProcessionRoutes.forEach((festival) => {
+												newVisibility[festival.festivalName] = checked;
+											});
+											setProcessionsVisible(newVisibility);
+										}}
+										variant="default"
+									/>
+								</div>
+
 								{processedProcessionRoutes.map((festivalGroup) => (
 									<div
 										key={festivalGroup.festivalName}

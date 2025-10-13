@@ -119,18 +119,6 @@ const RouteIcon = ({ className }: { className?: string }) => (
 			strokeWidth={2}
 			d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
 		/>
-		<path
-			strokeLinecap="round"
-			strokeLinejoin="round"
-			strokeWidth={2}
-			d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-		/>
-		<path
-			strokeLinecap="round"
-			strokeLinejoin="round"
-			strokeWidth={2}
-			d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-		/>
 	</svg>
 );
 
@@ -158,7 +146,7 @@ export default function Sidebar({ children, processionRoutes }: SidebarProps) {
 		},
 		{
 			id: "routes",
-			icon: null,
+			icon: RouteIcon,
 			title: "Procession Routes",
 			description: "Manage festival routes",
 		},
@@ -203,29 +191,6 @@ export default function Sidebar({ children, processionRoutes }: SidebarProps) {
 					{sidebarSections.map((section) => {
 						const IconComponent = section.icon;
 						const isActive = activeSection === section.id;
-
-						// Render text-based navigation for sections without icons
-						if (!IconComponent) {
-							return (
-								<button
-									key={section.id}
-									onClick={() => selectSection(section.id)}
-									className={`
-                    group relative w-10 h-10 rounded-lg flex items-center justify-center
-                    transition-all duration-200 ease-out
-                    ${isActive ? "bg-gray-900/40 border border-gray-800/60 text-gray-100" : "hover:bg-gray-900/30 text-gray-400 hover:text-gray-100"}
-                  `}
-									title={section.title}
-								>
-									<span className="text-xs font-medium">🛤️</span>
-
-									{/* Tooltip */}
-									<div className="absolute left-full ml-3 px-2 py-1 bg-gray-800 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-										{section.title}
-									</div>
-								</button>
-							);
-						}
 
 						return (
 							<button
