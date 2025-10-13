@@ -44,6 +44,39 @@ export interface PoliceStationResponse {
 	data: PoliceStation[];
 }
 
+export interface MapDataPoint {
+	id: number;
+	user_id: number;
+	category_id: number;
+	subcategory_id: number;
+	crime_number: string | null;
+	name: string;
+	description: string;
+	latitude: string;
+	longitude: string;
+	accuracy: number;
+	altitude: number;
+	address: string;
+	image_path: string | null;
+	additional_info: string | null;
+	status: string;
+	created_at: string;
+	updated_at: string;
+	verified_by: string | number | null;
+	verified_at: string | null;
+	image_url: string | null;
+	user_name: string | null;
+	category_name: string;
+	category_color: string;
+}
+
+export interface MapDataResponse {
+	success: boolean;
+	data_points: MapDataPoint[];
+	crime_data?: any[];
+	processions_routes?: any[];
+}
+
 export interface Hospital {
 	id: string | number;
 	name: string;
@@ -455,5 +488,39 @@ export async function fetchDial112Calls(): Promise<Dial112Call[]> {
 	} catch (error) {
 		console.error("❌ Error fetching Dial 112 calls:", error);
 		return [];
+	}
+}
+
+/**
+ * Fetch map data from the external API
+ */
+export async function fetchMapData(): Promise<MapDataResponse> {
+	try {
+		console.log("🗺️ Fetching map data from external API...");
+
+		const response = await fetch(`${BASE_URL}?endpoint=get-map-data`, {
+			method: "GET",
+			headers: {
+				Accept: "application/json",
+				"Content-Type": "application/json",
+			},
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const data: MapDataResponse = await response.json();
+
+		if (!data.success) {
+			throw new Error("API returned success: false");
+		}
+
+		console.log(`✅ Fetched ${data.data_points.length} map data points`);
+
+		return data;
+	} catch (error) {
+		console.error("❌ Error fetching map data:", error);
+		throw error;
 	}
 }

@@ -138,8 +138,16 @@ export const PoliceStationSchema = z.object({
 	ward: z.string(),
 });
 
-// Police stations endpoint returns just an array, not wrapped in response object
-export const PoliceStationResponseSchema = z.array(PoliceStationSchema);
+// Police stations endpoint returns wrapped response object with 'stations' field
+export const PoliceStationResponseSchema = BaseResponseSchema.extend({
+	stations: z.array(
+		z.object({
+			id: z.number(),
+			station_name: z.string(),
+			station_name_marathi: z.string().optional(),
+		}),
+	),
+});
 
 // 8. Procession Routes Schema
 export const ProcessionRouteSchema = z.object({
@@ -172,6 +180,52 @@ export const ProcessionRouteSchema = z.object({
 // Procession routes endpoint returns wrapped response object
 export const ProcessionRoutesResponseSchema = BaseResponseSchema.extend({
 	routes: z.array(ProcessionRouteSchema),
+	count: z.number().optional(),
+	categorized: z.record(z.string(), z.array(ProcessionRouteSchema)).optional(),
+});
+
+// 8.1. Route Gap Analysis Schema
+export const GapAnalysisItemSchema = z.object({
+	festival: z.any(),
+	total_routes: z.number(),
+	covered_police_stations: z.array(z.string()),
+	uncovered_police_stations: z.array(z.string()),
+	covered_villages: z.array(z.string()),
+	uncovered_villages: z.array(z.string()),
+	coverage_percentage: z.object({
+		police_stations: z.number(),
+		villages: z.number(),
+	}),
+});
+
+export const RouteGapAnalysisResponseSchema = BaseResponseSchema.extend({
+	gap_analysis: z.array(GapAnalysisItemSchema).optional(),
+	summary: z
+		.object({
+			total_festivals: z.number(),
+			total_police_stations: z.number(),
+			total_villages: z.number(),
+			total_routes: z.number(),
+		})
+		.optional(),
+	message: z.string().optional(),
+	error: z.string().optional(),
+});
+
+// 8.2. Festival Schema
+export const FestivalSchema = z.object({
+	id: z.number(),
+	name: z.string(),
+	category: z.string().optional(),
+	description: z.string().optional(),
+	start_date: z.string().optional(),
+	end_date: z.string().optional(),
+	is_active: z.boolean().optional(),
+	created_at: z.string().optional(),
+});
+
+export const FestivalsResponseSchema = BaseResponseSchema.extend({
+	festivals: z.array(FestivalSchema),
 });
 
 // 9. Crime Data Schema
@@ -362,15 +416,27 @@ export const ENDPOINT_CONFIGS = [
 	},
 	{
 		name: "Police Stations",
-		endpoint: "get-police-stations",
-		schema: PoliceStationResponseSchema,
-		description: "Police station locations and contact info",
+		endpoint: "get-map-data",
+		schema: MapDataResponseSchema,
+		description: "Police station locations and contact info (filtered from map data)",
 	},
 	{
 		name: "Procession Routes",
 		endpoint: "get-procession-routes",
 		schema: ProcessionRoutesResponseSchema,
 		description: "Festival procession routes and waypoints",
+	},
+	{
+		name: "Route Gap Analysis",
+		endpoint: "get-route-gap-analysis",
+		schema: RouteGapAnalysisResponseSchema,
+		description: "Analyzes route coverage and identifies gaps",
+	},
+	{
+		name: "Festivals",
+		endpoint: "get-festivals",
+		schema: FestivalsResponseSchema,
+		description: "Festival data and categories",
 	},
 	{
 		name: "Crime Data",

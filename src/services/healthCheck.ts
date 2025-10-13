@@ -62,23 +62,42 @@ export async function testEndpoint(config: EndpointConfig): Promise<HealthCheckR
 		const data = await response.json();
 
 		// Get first 5 items for sample data
-		const dataSample = Array.isArray(data.data)
-			? data.data.slice(0, 5)
-			: Array.isArray(data.data_points)
-			? data.data_points.slice(0, 5)
-			: Array.isArray(data.features)
-			? data.features.slice(0, 5)
-			: Array.isArray(data.routes)
-			? data.routes.slice(0, 5)
-			: Array.isArray(data.categories)
-			? data.categories.slice(0, 5)
-			: Array.isArray(data.nodes)
-			? data.nodes.slice(0, 5)
-			: Array.isArray(data.alerts)
-			? data.alerts.slice(0, 5)
-			: Array.isArray(data.items)
-			? data.items.slice(0, 5)
-			: [];
+		let dataSample = [];
+
+		if (Array.isArray(data.data)) {
+			dataSample = data.data.slice(0, 5);
+		} else if (Array.isArray(data.data_points)) {
+			// For map data, filter police stations if this is the police stations endpoint
+			if (config.name === "Police Stations") {
+				const policeStations = data.data_points.filter((item: any) => item.category_name === "पोलीस आस्थापना");
+				if (policeStations.length > 0) {
+					dataSample = policeStations.slice(0, 5);
+				} else {
+					// Fallback: show first 5 data points if no police stations found
+					dataSample = data.data_points.slice(0, 5);
+				}
+			} else {
+				dataSample = data.data_points.slice(0, 5);
+			}
+		} else if (Array.isArray(data.stations)) {
+			dataSample = data.stations.slice(0, 5);
+		} else if (Array.isArray(data.features)) {
+			dataSample = data.features.slice(0, 5);
+		} else if (Array.isArray(data.routes)) {
+			dataSample = data.routes.slice(0, 5);
+		} else if (Array.isArray(data.categories)) {
+			dataSample = data.categories.slice(0, 5);
+		} else if (Array.isArray(data.nodes)) {
+			dataSample = data.nodes.slice(0, 5);
+		} else if (Array.isArray(data.alerts)) {
+			dataSample = data.alerts.slice(0, 5);
+		} else if (Array.isArray(data.items)) {
+			dataSample = data.items.slice(0, 5);
+		} else if (Array.isArray(data.gap_analysis)) {
+			dataSample = data.gap_analysis.slice(0, 5);
+		} else if (Array.isArray(data.festivals)) {
+			dataSample = data.festivals.slice(0, 5);
+		}
 
 		// Validate against schema
 		const validationResult = config.schema.safeParse(data);

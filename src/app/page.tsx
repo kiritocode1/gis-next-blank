@@ -19,6 +19,8 @@ import {
 	streamDial112Calls,
 	type AccidentRecord,
 	streamAccidentData,
+	fetchMapData,
+	type MapDataPoint,
 } from "@/services/externalApi";
 
 export default function Home() {
@@ -51,6 +53,12 @@ export default function Home() {
 	const [hospitalLocations, setHospitalLocations] = useState<Hospital[]>([]);
 	const [hospitalLoading, setHospitalLoading] = useState(false);
 	const [hospitalHeatmapVisible, setHospitalHeatmapVisible] = useState(false);
+
+	// Police station layer state
+	const [policeLayerVisible, setPoliceLayerVisible] = useState(false);
+	const [policeLocations, setPoliceLocations] = useState<any[]>([]);
+	const [policeLoading, setPoliceLoading] = useState(false);
+	const [policeHeatmapVisible, setPoliceHeatmapVisible] = useState(false);
 
 	// External API data state
 	const [cctvLocations, setCctvLocations] = useState<CCTVLocation[]>([]);
@@ -164,6 +172,28 @@ export default function Home() {
 
 		loadHospitalData();
 	}, [hospitalLayerVisible, hospitalLocations.length, hospitalLoading]);
+
+	// Load Police Station data when toggle is enabled
+	useEffect(() => {
+		const loadPoliceData = async () => {
+			if (policeLayerVisible && policeLocations.length === 0 && !policeLoading) {
+				setPoliceLoading(true);
+				try {
+					console.log("🚔 Loading Police Station data...");
+					const data = await fetchMapData();
+					const policeStations = data.data_points.filter((item: MapDataPoint) => item.category_name === "पोलीस आस्थापना");
+					setPoliceLocations(policeStations);
+					console.log(`✅ Loaded ${policeStations.length} Police Station locations`);
+				} catch (error) {
+					console.error("❌ Failed to load Police Station data:", error);
+				} finally {
+					setPoliceLoading(false);
+				}
+			}
+		};
+
+		loadPoliceData();
+	}, [policeLayerVisible, policeLocations.length, policeLoading]);
 
 	// Load Dial 112 via SSE (cache all points, no rendering yet)
 	useEffect(() => {
@@ -478,6 +508,32 @@ export default function Home() {
 				},
 			})),
 		},
+		// Police Stations
+		{
+			name: "Police Stations",
+			color: "#3B82F6", // Blue
+			visible: policeLayerVisible,
+			markers: policeLocations.map((police) => ({
+				position: {
+					lat: typeof police.latitude === "string" ? parseFloat(police.latitude) : police.latitude,
+					lng: typeof police.longitude === "string" ? parseFloat(police.longitude) : police.longitude,
+				},
+				title: police.name || `Police Station ${police.id}`,
+				label: "🚔",
+				extraData: {
+					policeName: police.name,
+					address: police.address,
+					description: police.description,
+					status: police.status,
+					verifiedBy: police.verified_by,
+					verifiedAt: police.verified_at,
+					imageUrl: police.image_url,
+					userName: police.user_name,
+					categoryName: police.category_name,
+					categoryColor: police.category_color,
+				},
+			})),
+		},
 		// Accident data from CSV
 		{
 			name: "Accident Records",
@@ -603,6 +659,27 @@ export default function Home() {
 			"rgba(219, 234, 254, 0.6)",
 			"rgba(147, 197, 253, 0.8)",
 			"rgba(59, 130, 246, 1)",
+		],
+	};
+
+	// Police Station heatmap data
+	const policeHeatmapData = {
+		data: policeLocations.map((police) => ({
+			position: {
+				lat: typeof police.latitude === "string" ? parseFloat(police.latitude) : police.latitude,
+				lng: typeof police.longitude === "string" ? parseFloat(police.longitude) : police.longitude,
+			},
+			weight: 1,
+		})),
+		visible: policeHeatmapVisible,
+		radius: 20,
+		opacity: 0.6,
+		gradient: [
+			"rgba(59, 130, 246, 0)", // blue transparent
+			"rgba(59, 130, 246, 0.4)",
+			"rgba(37, 99, 235, 0.6)",
+			"rgba(29, 78, 216, 0.8)",
+			"rgba(30, 64, 175, 1)",
 		],
 	};
 
@@ -1022,6 +1099,51 @@ export default function Home() {
 									variant="default"
 								/>
 							</div>
+
+							{/* Police Station Points Toggle */}
+							<div className="flex items-center justify-between cursor-pointer group">
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🚔 Police Stations</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												policeLayerVisible ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{policeLayerVisible ? "ON" : "OFF"}
+										</span>
+										{policeLoading && <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin"></div>}
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Police stations ({policeLocations.length} locations)</p>
+								</div>
+								<Toggle
+									checked={policeLayerVisible}
+									onCheckedChange={setPoliceLayerVisible}
+									variant="default"
+								/>
+							</div>
+
+							{/* Police Station Heatmap Toggle */}
+							<div className="flex items-center justify-between cursor-pointer group">
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🔥 Police Heatmap</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												policeHeatmapVisible ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{policeHeatmapVisible ? "ON" : "OFF"}
+										</span>
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Density visualization ({policeLocations.length} total)</p>
+								</div>
+								<Toggle
+									checked={policeHeatmapVisible}
+									onCheckedChange={setPoliceHeatmapVisible}
+									variant="default"
+								/>
+							</div>
 						</div>
 
 						{/* Layer Statistics */}
@@ -1045,9 +1167,11 @@ export default function Home() {
 												bankHeatmapVisible,
 												hospitalLayerVisible,
 												hospitalHeatmapVisible,
+												policeLayerVisible,
+												policeHeatmapVisible,
 											].filter(Boolean).length
 										}
-										/13
+										/15
 									</span>
 								</div>
 								<div className="flex justify-between">
@@ -1078,6 +1202,10 @@ export default function Home() {
 									<span>Hospitals:</span>
 									<span className="font-medium text-white">{hospitalLocations.length}</span>
 								</div>
+								<div className="flex justify-between">
+									<span>Police Stations:</span>
+									<span className="font-medium text-blue-400">{policeLocations.length}</span>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -1100,8 +1228,9 @@ export default function Home() {
 							...(atmHeatmapVisible ? atmHeatmapData.data : []),
 							...(bankHeatmapVisible ? bankHeatmapData.data : []),
 							...(hospitalHeatmapVisible ? hospitalHeatmapData.data : []),
+							...(policeHeatmapVisible ? policeHeatmapData.data : []),
 						],
-						visible: dial112HeatmapVisible || accidentHeatmapVisible || atmHeatmapVisible || bankHeatmapVisible || hospitalHeatmapVisible,
+						visible: dial112HeatmapVisible || accidentHeatmapVisible || atmHeatmapVisible || bankHeatmapVisible || hospitalHeatmapVisible || policeHeatmapVisible,
 						radius: 20,
 						opacity: 0.6,
 						gradient: dial112HeatmapVisible
@@ -1114,6 +1243,8 @@ export default function Home() {
 							? bankHeatmapData.gradient
 							: hospitalHeatmapVisible
 							? hospitalHeatmapData.gradient
+							: policeHeatmapVisible
+							? policeHeatmapData.gradient
 							: dial112HeatmapData.gradient,
 					}}
 					kmlLayer={kmlLayerConfig}
