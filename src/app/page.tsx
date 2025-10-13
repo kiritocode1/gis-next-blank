@@ -27,8 +27,8 @@ import {
 
 export default function Home() {
 	// State for selected point and search
-	const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number; zoom?: number } | undefined>();
-	const [searchQuery] = useState("");
+	const [selectedPoint] = useState<{ lat: number; lng: number; zoom?: number } | undefined>();
+	// const [searchQuery] = useState(""); // Currently unused
 	const [clickedPoint, setClickedPoint] = useState<{ lat: number; lng: number; title?: string; group?: string } | null>(null);
 	const [kmlLayerVisible, setKmlLayerVisible] = useState(false); // Start disabled by default
 	const [geoJsonLayerVisible, setGeoJsonLayerVisible] = useState(false);
@@ -636,7 +636,7 @@ export default function Home() {
 							const coordinates = JSON.parse(route.route_coordinates);
 							return {
 								id: route.id,
-								path: coordinates.map((coord: any) => ({
+								path: coordinates.map((coord: { latitude: string; longitude: string }) => ({
 									lat: parseFloat(coord.latitude),
 									lng: parseFloat(coord.longitude),
 								})),
@@ -818,17 +818,17 @@ export default function Home() {
 
 	const searchablePoints = createSearchablePoints();
 
-	// Search function that can be used by AI or user input
-	const searchPoints = (query: string) => {
-		const lowerQuery = query.toLowerCase();
-		return searchablePoints.filter(
-			(point) =>
-				point.title.toLowerCase().includes(lowerQuery) ||
-				point.group?.toLowerCase().includes(lowerQuery) ||
-				point.tags?.some((tag) => tag.includes(lowerQuery)) ||
-				point.description?.toLowerCase().includes(lowerQuery),
-		);
-	};
+	// Search function that can be used by AI or user input - currently unused
+	// const searchPoints = (query: string) => {
+	// 	const lowerQuery = query.toLowerCase();
+	// 	return searchablePoints.filter(
+	// 		(point) =>
+	// 			point.title.toLowerCase().includes(lowerQuery) ||
+	// 			point.group?.toLowerCase().includes(lowerQuery) ||
+	// 			point.tags?.some((tag) => tag.includes(lowerQuery)) ||
+	// 			point.description?.toLowerCase().includes(lowerQuery),
+	// 	);
+	// };
 
 	// Handle KML toggle
 	const handleKMLToggle = (visible: boolean) => {
@@ -854,10 +854,10 @@ export default function Home() {
 		console.log("🎥 Page: CCTV toggle completed, new visible state should be:", visible);
 	};
 
-	// Navigate to a specific point
-	const navigateToPoint = (point: { lat: number; lng: number; zoom?: number }) => {
-		setSelectedPoint(point);
-	};
+	// Navigate to a specific point - currently unused
+	// const navigateToPoint = (point: { lat: number; lng: number; zoom?: number }) => {
+	// 	setSelectedPoint(point);
+	// };
 
 	// Handle marker clicks
 	const handlePointClick = (point: { lat: number; lng: number; title?: string; group?: string }) => {
