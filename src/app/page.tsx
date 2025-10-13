@@ -6,7 +6,20 @@ import { Toggle, GooeyFilter } from "@/components/LiquidToggle";
 import { AnimatePresence } from "framer-motion";
 import StreetViewPopup from "@/components/StreetViewPopup";
 import { useState, useEffect, useRef } from "react";
-import { fetchCCTVLocations, type CCTVLocation, type Dial112Call, streamDial112Calls, type AccidentRecord, streamAccidentData } from "@/services/externalApi";
+import {
+	fetchCCTVLocations,
+	type CCTVLocation,
+	fetchATMLocations,
+	type ATMLocation,
+	fetchBankLocations,
+	type BankLocation,
+	fetchHospitals,
+	type Hospital,
+	type Dial112Call,
+	streamDial112Calls,
+	type AccidentRecord,
+	streamAccidentData,
+} from "@/services/externalApi";
 
 export default function Home() {
 	// State for selected point and search
@@ -20,6 +33,24 @@ export default function Home() {
 	const [dial112HeatmapVisible, setDial112HeatmapVisible] = useState(false); // Dial 112 heatmap toggle
 	const [accidentVisible, setAccidentVisible] = useState(false); // Accident points toggle
 	const [accidentHeatmapVisible, setAccidentHeatmapVisible] = useState(false); // Accident heatmap toggle
+
+	// ATM layer state
+	const [atmLayerVisible, setAtmLayerVisible] = useState(false);
+	const [atmLocations, setAtmLocations] = useState<ATMLocation[]>([]);
+	const [atmLoading, setAtmLoading] = useState(false);
+	const [atmHeatmapVisible, setAtmHeatmapVisible] = useState(false);
+
+	// Bank layer state
+	const [bankLayerVisible, setBankLayerVisible] = useState(false);
+	const [bankLocations, setBankLocations] = useState<BankLocation[]>([]);
+	const [bankLoading, setBankLoading] = useState(false);
+	const [bankHeatmapVisible, setBankHeatmapVisible] = useState(false);
+
+	// Hospital layer state
+	const [hospitalLayerVisible, setHospitalLayerVisible] = useState(false);
+	const [hospitalLocations, setHospitalLocations] = useState<Hospital[]>([]);
+	const [hospitalLoading, setHospitalLoading] = useState(false);
+	const [hospitalHeatmapVisible, setHospitalHeatmapVisible] = useState(false);
 
 	// External API data state
 	const [cctvLocations, setCctvLocations] = useState<CCTVLocation[]>([]);
@@ -70,6 +101,69 @@ export default function Home() {
 
 		loadCCTVData();
 	}, [cctvLayerVisible, cctvLocations.length, cctvLoading]);
+
+	// Load ATM data when toggle is enabled
+	useEffect(() => {
+		const loadATMData = async () => {
+			if (atmLayerVisible && atmLocations.length === 0 && !atmLoading) {
+				setAtmLoading(true);
+				try {
+					console.log("🏧 Loading ATM data...");
+					const data = await fetchATMLocations();
+					setAtmLocations(data);
+					console.log(`✅ Loaded ${data.length} ATM locations`);
+				} catch (error) {
+					console.error("❌ Failed to load ATM data:", error);
+				} finally {
+					setAtmLoading(false);
+				}
+			}
+		};
+
+		loadATMData();
+	}, [atmLayerVisible, atmLocations.length, atmLoading]);
+
+	// Load Bank data when toggle is enabled
+	useEffect(() => {
+		const loadBankData = async () => {
+			if (bankLayerVisible && bankLocations.length === 0 && !bankLoading) {
+				setBankLoading(true);
+				try {
+					console.log("🏦 Loading Bank data...");
+					const data = await fetchBankLocations();
+					setBankLocations(data);
+					console.log(`✅ Loaded ${data.length} Bank locations`);
+				} catch (error) {
+					console.error("❌ Failed to load Bank data:", error);
+				} finally {
+					setBankLoading(false);
+				}
+			}
+		};
+
+		loadBankData();
+	}, [bankLayerVisible, bankLocations.length, bankLoading]);
+
+	// Load Hospital data when toggle is enabled
+	useEffect(() => {
+		const loadHospitalData = async () => {
+			if (hospitalLayerVisible && hospitalLocations.length === 0 && !hospitalLoading) {
+				setHospitalLoading(true);
+				try {
+					console.log("🏥 Loading Hospital data...");
+					const data = await fetchHospitals();
+					setHospitalLocations(data);
+					console.log(`✅ Loaded ${data.length} Hospital locations`);
+				} catch (error) {
+					console.error("❌ Failed to load Hospital data:", error);
+				} finally {
+					setHospitalLoading(false);
+				}
+			}
+		};
+
+		loadHospitalData();
+	}, [hospitalLayerVisible, hospitalLocations.length, hospitalLoading]);
 
 	// Load Dial 112 via SSE (cache all points, no rendering yet)
 	useEffect(() => {
@@ -317,6 +411,73 @@ export default function Home() {
 				},
 			})),
 		},
+		// ATM Locations
+		{
+			name: "ATM Locations",
+			color: "#86EFAC", // Light green
+			visible: atmLayerVisible,
+			markers: atmLocations.map((atm) => ({
+				position: {
+					lat: typeof atm.latitude === "string" ? parseFloat(atm.latitude) : atm.latitude,
+					lng: typeof atm.longitude === "string" ? parseFloat(atm.longitude) : atm.longitude,
+				},
+				title: atm.name || atm.bank_name || `ATM ${atm.id}`,
+				label: "🏧",
+				extraData: {
+					bankName: atm.bank_name,
+					address: atm.address,
+					isWorking: atm.is_working,
+					ward: atm.ward,
+				},
+			})),
+		},
+		// Bank Branches
+		{
+			name: "Bank Branches",
+			color: "#16A34A", // Dark green
+			visible: bankLayerVisible,
+			markers: bankLocations.map((bank) => ({
+				position: {
+					lat: typeof bank.latitude === "string" ? parseFloat(bank.latitude) : bank.latitude,
+					lng: typeof bank.longitude === "string" ? parseFloat(bank.longitude) : bank.longitude,
+				},
+				title: bank.name || bank.bank_name || `Bank ${bank.id}`,
+				label: "🏦",
+				extraData: {
+					bankName: bank.bank_name,
+					branchName: bank.branch_name,
+					address: bank.address,
+					ifscCode: bank.ifsc_code,
+					contactNumber: bank.contact_number,
+					isActive: bank.is_active,
+					ward: bank.ward,
+				},
+			})),
+		},
+		// Hospitals
+		{
+			name: "Hospitals",
+			color: "#FFFFFF", // White
+			visible: hospitalLayerVisible,
+			markers: hospitalLocations.map((hospital) => ({
+				position: {
+					lat: typeof hospital.latitude === "string" ? parseFloat(hospital.latitude) : hospital.latitude,
+					lng: typeof hospital.longitude === "string" ? parseFloat(hospital.longitude) : hospital.longitude,
+				},
+				title: hospital.name || hospital.hospital_name || `Hospital ${hospital.id}`,
+				label: "🏥",
+				extraData: {
+					hospitalName: hospital.hospital_name,
+					address: hospital.address,
+					contactNumber: hospital.contact_number,
+					phone: hospital.phone,
+					type: hospital.type,
+					specialties: hospital.specialties,
+					isActive: hospital.is_active,
+					ward: hospital.ward,
+				},
+			})),
+		},
 		// Accident data from CSV
 		{
 			name: "Accident Records",
@@ -379,6 +540,69 @@ export default function Home() {
 			"rgba(185, 28, 28, 0.8)",
 			"rgba(153, 27, 27, 1)",
 			"rgba(127, 29, 29, 1)",
+		],
+	};
+
+	// ATM heatmap data
+	const atmHeatmapData = {
+		data: atmLocations.map((atm) => ({
+			position: {
+				lat: typeof atm.latitude === "string" ? parseFloat(atm.latitude) : atm.latitude,
+				lng: typeof atm.longitude === "string" ? parseFloat(atm.longitude) : atm.longitude,
+			},
+			weight: 1,
+		})),
+		visible: atmHeatmapVisible,
+		radius: 20,
+		opacity: 0.6,
+		gradient: [
+			"rgba(134, 239, 172, 0)", // light green transparent
+			"rgba(134, 239, 172, 0.4)",
+			"rgba(74, 222, 128, 0.6)",
+			"rgba(34, 197, 94, 0.8)",
+			"rgba(22, 163, 74, 1)",
+		],
+	};
+
+	// Bank heatmap data
+	const bankHeatmapData = {
+		data: bankLocations.map((bank) => ({
+			position: {
+				lat: typeof bank.latitude === "string" ? parseFloat(bank.latitude) : bank.latitude,
+				lng: typeof bank.longitude === "string" ? parseFloat(bank.longitude) : bank.longitude,
+			},
+			weight: 1,
+		})),
+		visible: bankHeatmapVisible,
+		radius: 20,
+		opacity: 0.6,
+		gradient: [
+			"rgba(22, 163, 74, 0)", // dark green transparent
+			"rgba(22, 163, 74, 0.4)",
+			"rgba(21, 128, 61, 0.6)",
+			"rgba(20, 83, 45, 0.8)",
+			"rgba(15, 46, 28, 1)",
+		],
+	};
+
+	// Hospital heatmap data
+	const hospitalHeatmapData = {
+		data: hospitalLocations.map((hospital) => ({
+			position: {
+				lat: typeof hospital.latitude === "string" ? parseFloat(hospital.latitude) : hospital.latitude,
+				lng: typeof hospital.longitude === "string" ? parseFloat(hospital.longitude) : hospital.longitude,
+			},
+			weight: 1,
+		})),
+		visible: hospitalHeatmapVisible,
+		radius: 20,
+		opacity: 0.6,
+		gradient: [
+			"rgba(255, 255, 255, 0)", // white transparent
+			"rgba(255, 255, 255, 0.4)",
+			"rgba(219, 234, 254, 0.6)",
+			"rgba(147, 197, 253, 0.8)",
+			"rgba(59, 130, 246, 1)",
 		],
 	};
 
@@ -663,6 +887,141 @@ export default function Home() {
 									variant="danger"
 								/>
 							</div>
+
+							{/* ATM Points Toggle */}
+							<div className="flex items-center justify-between cursor-pointer group">
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🏧 ATM Locations</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												atmLayerVisible ? "bg-green-300/20 text-green-300 border border-green-300/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{atmLayerVisible ? "ON" : "OFF"}
+										</span>
+										{atmLoading && <div className="w-3 h-3 border border-green-300 border-t-transparent rounded-full animate-spin"></div>}
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">ATM locations ({atmLocations.length} locations)</p>
+								</div>
+								<Toggle
+									checked={atmLayerVisible}
+									onCheckedChange={setAtmLayerVisible}
+									variant="success"
+								/>
+							</div>
+
+							{/* ATM Heatmap Toggle */}
+							<div className="flex items-center justify-between cursor-pointer group">
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🔥 ATM Heatmap</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												atmHeatmapVisible ? "bg-green-300/20 text-green-300 border border-green-300/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{atmHeatmapVisible ? "ON" : "OFF"}
+										</span>
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Density visualization ({atmLocations.length} total)</p>
+								</div>
+								<Toggle
+									checked={atmHeatmapVisible}
+									onCheckedChange={setAtmHeatmapVisible}
+									variant="success"
+								/>
+							</div>
+
+							{/* Bank Points Toggle */}
+							<div className="flex items-center justify-between cursor-pointer group">
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🏦 Bank Branches</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												bankLayerVisible ? "bg-green-600/20 text-green-400 border border-green-600/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{bankLayerVisible ? "ON" : "OFF"}
+										</span>
+										{bankLoading && <div className="w-3 h-3 border border-green-400 border-t-transparent rounded-full animate-spin"></div>}
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Bank branches ({bankLocations.length} locations)</p>
+								</div>
+								<Toggle
+									checked={bankLayerVisible}
+									onCheckedChange={setBankLayerVisible}
+									variant="success"
+								/>
+							</div>
+
+							{/* Bank Heatmap Toggle */}
+							<div className="flex items-center justify-between cursor-pointer group">
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🔥 Bank Heatmap</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												bankHeatmapVisible ? "bg-green-600/20 text-green-400 border border-green-600/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{bankHeatmapVisible ? "ON" : "OFF"}
+										</span>
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Density visualization ({bankLocations.length} total)</p>
+								</div>
+								<Toggle
+									checked={bankHeatmapVisible}
+									onCheckedChange={setBankHeatmapVisible}
+									variant="success"
+								/>
+							</div>
+
+							{/* Hospital Points Toggle */}
+							<div className="flex items-center justify-between cursor-pointer group">
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🏥 Hospitals</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												hospitalLayerVisible ? "bg-white/20 text-white border border-white/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{hospitalLayerVisible ? "ON" : "OFF"}
+										</span>
+										{hospitalLoading && <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>}
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Medical facilities ({hospitalLocations.length} locations)</p>
+								</div>
+								<Toggle
+									checked={hospitalLayerVisible}
+									onCheckedChange={setHospitalLayerVisible}
+									variant="default"
+								/>
+							</div>
+
+							{/* Hospital Heatmap Toggle */}
+							<div className="flex items-center justify-between cursor-pointer group">
+								<div className="flex-1">
+									<div className="flex items-center space-x-2">
+										<span className="text-sm font-medium text-gray-200">🔥 Hospital Heatmap</span>
+										<span
+											className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+												hospitalHeatmapVisible ? "bg-white/20 text-white border border-white/30" : "bg-gray-700/50 text-gray-500 border border-gray-600/30"
+											}`}
+										>
+											{hospitalHeatmapVisible ? "ON" : "OFF"}
+										</span>
+									</div>
+									<p className="text-xs text-gray-400 mt-0.5">Density visualization ({hospitalLocations.length} total)</p>
+								</div>
+								<Toggle
+									checked={hospitalHeatmapVisible}
+									onCheckedChange={setHospitalHeatmapVisible}
+									variant="default"
+								/>
+							</div>
 						</div>
 
 						{/* Layer Statistics */}
@@ -672,10 +1031,23 @@ export default function Home() {
 									<span>Active Layers:</span>
 									<span className="font-medium">
 										{
-											[kmlLayerVisible, geoJsonLayerVisible, cctvLayerVisible, dial112Visible, dial112HeatmapVisible, accidentVisible, accidentHeatmapVisible].filter(Boolean)
-												.length
+											[
+												kmlLayerVisible,
+												geoJsonLayerVisible,
+												cctvLayerVisible,
+												dial112Visible,
+												dial112HeatmapVisible,
+												accidentVisible,
+												accidentHeatmapVisible,
+												atmLayerVisible,
+												atmHeatmapVisible,
+												bankLayerVisible,
+												bankHeatmapVisible,
+												hospitalLayerVisible,
+												hospitalHeatmapVisible,
+											].filter(Boolean).length
 										}
-										/7
+										/13
 									</span>
 								</div>
 								<div className="flex justify-between">
@@ -694,6 +1066,18 @@ export default function Home() {
 									<span>CCTV Cameras:</span>
 									<span className="font-medium text-orange-400">{cctvLocations.length}</span>
 								</div>
+								<div className="flex justify-between">
+									<span>ATM Locations:</span>
+									<span className="font-medium text-green-300">{atmLocations.length}</span>
+								</div>
+								<div className="flex justify-between">
+									<span>Bank Branches:</span>
+									<span className="font-medium text-green-400">{bankLocations.length}</span>
+								</div>
+								<div className="flex justify-between">
+									<span>Hospitals:</span>
+									<span className="font-medium text-white">{hospitalLocations.length}</span>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -710,11 +1094,27 @@ export default function Home() {
 					className="w-full h-full"
 					markerGroups={markerGroups}
 					heatmap={{
-						data: [...(dial112HeatmapVisible ? dial112HeatmapData.data : []), ...(accidentHeatmapVisible ? accidentHeatmapData.data : [])],
-						visible: dial112HeatmapVisible || accidentHeatmapVisible,
+						data: [
+							...(dial112HeatmapVisible ? dial112HeatmapData.data : []),
+							...(accidentHeatmapVisible ? accidentHeatmapData.data : []),
+							...(atmHeatmapVisible ? atmHeatmapData.data : []),
+							...(bankHeatmapVisible ? bankHeatmapData.data : []),
+							...(hospitalHeatmapVisible ? hospitalHeatmapData.data : []),
+						],
+						visible: dial112HeatmapVisible || accidentHeatmapVisible || atmHeatmapVisible || bankHeatmapVisible || hospitalHeatmapVisible,
 						radius: 20,
 						opacity: 0.6,
-						gradient: dial112HeatmapVisible ? dial112HeatmapData.gradient : accidentHeatmapData.gradient,
+						gradient: dial112HeatmapVisible
+							? dial112HeatmapData.gradient
+							: accidentHeatmapVisible
+							? accidentHeatmapData.gradient
+							: atmHeatmapVisible
+							? atmHeatmapData.gradient
+							: bankHeatmapVisible
+							? bankHeatmapData.gradient
+							: hospitalHeatmapVisible
+							? hospitalHeatmapData.gradient
+							: dial112HeatmapData.gradient,
 					}}
 					kmlLayer={kmlLayerConfig}
 					geoJsonLayer={geoJsonLayerConfig}

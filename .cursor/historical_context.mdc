@@ -297,3 +297,40 @@ Notes:
 -   Positioned toggles below Dial112 toggles in sidebar.
 
 ---
+
+Date: 2025-01-27
+Author: AI Pair Programmer
+Change Summary:
+
+-   Added ATM, Bank, and Hospital data layers with point markers and heatmap toggles.
+-   Fetched data from external API endpoints following CCTV implementation pattern.
+-   Added color-coded markers: ATM (light green #86EFAC), Bank (dark green #16A34A), Hospital (white #FFFFFF).
+-   Implemented 6 new sidebar toggles for points and heatmaps with loading spinners and counts.
+
+Files Updated:
+
+-   src/services/externalApi.ts:
+    -   Added BankLocation interface: L83-L98
+    -   Added BankResponse interface: L100-L103
+    -   Added fetchBankLocations function: L395-L440
+-   src/app/page.tsx:
+    -   Updated imports to include new types: L9
+    -   Added state variables for ATM, Bank, Hospital layers: L24-L40
+    -   Added data loading effects: L92-L153
+    -   Added marker groups for ATM, Bank, Hospital: L401-L467
+    -   Added heatmap data objects: L533-L594
+    -   Added 6 new sidebar toggles: L878-L1011
+    -   Updated layer statistics: L1021-L1025, L1043-L1054
+    -   Updated GoogleMap heatmap prop: L1070-L1086
+
+Notes:
+
+-   ATM uses light green (#86EFAC) with 🏧 emoji and "success" variant.
+-   Bank uses dark green (#16A34A) with 🏦 emoji and "success" variant.
+-   Hospital uses white (#FFFFFF) with 🏥 emoji and "default" variant.
+-   All layers follow CCTV pattern: load once when toggle enabled, show loading spinner.
+-   Heatmaps use appropriate color gradients matching marker colors.
+-   External API endpoints: get-atm-locations, get-bank-locations, get-hospitals.
+-   Active layers count updated from /7 to /13.
+
+---

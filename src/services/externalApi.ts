@@ -80,6 +80,28 @@ export interface ATMResponse {
 	data: ATMLocation[];
 }
 
+export interface BankLocation {
+	id: string | number;
+	bank_name: string;
+	name: string;
+	branch_name: string;
+	branch: string;
+	latitude: string | number;
+	longitude: string | number;
+	address: string;
+	ifsc_code: string;
+	ifsc: string;
+	contact_number: string;
+	phone: string;
+	is_active: boolean;
+	ward: string;
+}
+
+export interface BankResponse {
+	success: boolean;
+	data: BankLocation[];
+}
+
 // Dial 112
 export interface Dial112Call {
 	id: string;
@@ -363,6 +385,56 @@ export async function fetchATMLocations(): Promise<ATMLocation[]> {
 		return validATMs;
 	} catch (error) {
 		console.error("❌ Error fetching ATM locations:", error);
+		throw error;
+	}
+}
+
+/**
+ * Fetch bank locations from the external API
+ */
+export async function fetchBankLocations(): Promise<BankLocation[]> {
+	try {
+		console.log("🏦 Fetching bank locations from external API...");
+
+		const response = await fetch(`${BASE_URL}?endpoint=get-bank-locations`, {
+			method: "GET",
+			headers: {
+				Accept: "application/json",
+				"Content-Type": "application/json",
+			},
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const data: BankResponse = await response.json();
+
+		if (!data.success) {
+			throw new Error("API returned success: false");
+		}
+
+		console.log(`✅ Fetched ${data.data.length} bank locations`);
+
+		// Transform coordinates to numbers and validate data
+		const validBanks = data.data
+			.filter((bank) => {
+				const lat = typeof bank.latitude === "string" ? parseFloat(bank.latitude) : bank.latitude;
+				const lng = typeof bank.longitude === "string" ? parseFloat(bank.longitude) : bank.longitude;
+
+				return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+			})
+			.map((bank) => ({
+				...bank,
+				latitude: typeof bank.latitude === "string" ? parseFloat(bank.latitude) : bank.latitude,
+				longitude: typeof bank.longitude === "string" ? parseFloat(bank.longitude) : bank.longitude,
+			}));
+
+		console.log(`📍 Valid bank locations: ${validBanks.length}/${data.data.length}`);
+
+		return validBanks;
+	} catch (error) {
+		console.error("❌ Error fetching bank locations:", error);
 		throw error;
 	}
 }
