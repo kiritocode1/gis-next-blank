@@ -158,7 +158,7 @@ export default function Sidebar({ children, processionRoutes }: SidebarProps) {
 		},
 		{
 			id: "routes",
-			icon: RouteIcon,
+			icon: null,
 			title: "Procession Routes",
 			description: "Manage festival routes",
 		},
@@ -203,6 +203,29 @@ export default function Sidebar({ children, processionRoutes }: SidebarProps) {
 					{sidebarSections.map((section) => {
 						const IconComponent = section.icon;
 						const isActive = activeSection === section.id;
+
+						// Render text-based navigation for sections without icons
+						if (!IconComponent) {
+							return (
+								<button
+									key={section.id}
+									onClick={() => selectSection(section.id)}
+									className={`
+                    group relative w-10 h-10 rounded-lg flex items-center justify-center
+                    transition-all duration-200 ease-out
+                    ${isActive ? "bg-gray-900/40 border border-gray-800/60 text-gray-100" : "hover:bg-gray-900/30 text-gray-400 hover:text-gray-100"}
+                  `}
+									title={section.title}
+								>
+									<span className="text-xs font-medium">🛤️</span>
+
+									{/* Tooltip */}
+									<div className="absolute left-full ml-3 px-2 py-1 bg-gray-800 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+										{section.title}
+									</div>
+								</button>
+							);
+						}
 
 						return (
 							<button

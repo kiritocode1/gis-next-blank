@@ -919,15 +919,17 @@ export default function Home() {
 										key={festivalGroup.festivalName}
 										className="flex items-center justify-between cursor-pointer group"
 									>
-										<div className="flex-1">
+										<div className="flex-1 min-w-0">
 											<div className="flex items-center space-x-2">
 												<div
-													className="w-3 h-3 rounded-full border border-white/20"
+													className="w-3 h-3 rounded-full border border-white/20 flex-shrink-0"
 													style={{ backgroundColor: festivalGroup.color }}
 												></div>
-												<span className="text-sm font-medium text-gray-200 truncate">{festivalGroup.festivalName}</span>
+												<span className="text-sm font-medium text-gray-200 truncate max-w-[120px]">
+													{festivalGroup.festivalName.length > 14 ? `${festivalGroup.festivalName.substring(0, 14)}...` : festivalGroup.festivalName}
+												</span>
 												<span
-													className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+													className={`px-2 py-0.5 text-xs rounded-full transition-colors flex-shrink-0 ${
 														processionsVisible[festivalGroup.festivalName]
 															? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
 															: "bg-gray-700/50 text-gray-500 border border-gray-600/30"
@@ -935,9 +937,9 @@ export default function Home() {
 												>
 													{processionsVisible[festivalGroup.festivalName] ? "ON" : "OFF"}
 												</span>
-												{processionLoading && <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin"></div>}
+												{processionLoading && <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>}
 											</div>
-											<p className="text-xs text-gray-400 mt-0.5">
+											<p className="text-xs text-gray-400 mt-0.5 truncate">
 												{festivalGroup.routes.length} route{festivalGroup.routes.length !== 1 ? "s" : ""}
 											</p>
 										</div>
