@@ -47,6 +47,7 @@
     - **Fixed sidebar section routing**: Moved procession routes from "Layers" section to dedicated "Procession Routes" section using new `processionRoutes` prop
     - **Added load button**: Added "Load Procession Routes" button to fetch and display festival routes when sidebar is empty
     - **Enhanced polyline rendering**: Fixed missing setMap() calls and added triple-layer glow effect (main line + inner glow + outer glow) with improved marker styling
+    - **Refined marker styling**: Removed borders from start/end markers to match map layers style and removed click handlers to prevent pin overlay on map
 
 2. **Added Procession-Related Endpoints**: Added missing endpoints to health check system:
 

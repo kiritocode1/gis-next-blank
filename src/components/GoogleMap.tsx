@@ -456,7 +456,7 @@ export default function GoogleMap({
 						glowPolyline.setMap(mapInstanceRef.current);
 						outerGlowPolyline.setMap(mapInstanceRef.current);
 
-						// Add start marker (green circle with border)
+						// Add start marker (green circle without border)
 						const startMarker = new window.google.maps.Marker({
 							position: new window.google.maps.LatLng(route.startPoint.lat, route.startPoint.lng),
 							map: mapInstanceRef.current,
@@ -466,13 +466,13 @@ export default function GoogleMap({
 								scale: 8,
 								fillColor: "#22C55E", // Green
 								fillOpacity: 1,
-								strokeColor: "#FFFFFF",
-								strokeWeight: 3,
+								strokeColor: "transparent",
+								strokeWeight: 0,
 							},
 							zIndex: 1001,
 						});
 
-						// Add end marker (red circle with border)
+						// Add end marker (red circle without border)
 						const endMarker = new window.google.maps.Marker({
 							position: new window.google.maps.LatLng(route.endPoint.lat, route.endPoint.lng),
 							map: mapInstanceRef.current,
@@ -482,23 +482,13 @@ export default function GoogleMap({
 								scale: 8,
 								fillColor: "#EF4444", // Red
 								fillOpacity: 1,
-								strokeColor: "#FFFFFF",
-								strokeWeight: 3,
+								strokeColor: "transparent",
+								strokeWeight: 0,
 							},
 							zIndex: 1001,
 						});
 
-						// Add click handler for route info
-						polyline.addListener("click", () => {
-							if (onPointClick) {
-								onPointClick({
-									lat: route.startPoint.lat,
-									lng: route.startPoint.lng,
-									title: `${route.festival_name} - ${route.procession_number}`,
-									group: "Procession Route",
-								});
-							}
-						});
+						// No click handler for procession routes to avoid pin overlay
 
 						// Store references for cleanup
 						polylinesRef.current.push(polyline, glowPolyline, outerGlowPolyline, startMarker, endMarker);
